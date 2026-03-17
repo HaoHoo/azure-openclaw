@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "eastus"
+    },
+    "resourceGroupName": {
+      "value": "azure-openclaw-rg"
+    },
+    "vmName": {
+      "value": "azure-openclaw-vm"
+    },
+    "vmSize": {
+      "value": "Standard_B1ms"
+    },
+    "vnetName": {
+      "value": "azure-openclaw-vnet"
+    },
+    "publicIpName": {
+      "value": "azure-openclaw-publicip"
+    },
+    "foundryName": {
+      "value": "azure-openclaw-foundry"
+    },
+    "modelName": {
+      "value": "gpt-5.2-chat"
+    },
+    "modelDeploymentName": {
+      "value": "openclaw-model"
+    },
+    "openclawPort": {
+      "value": 11434
+    },
+    "adminUsername": {
+      "value": "azureuser"
+    },
+    "adminSshPublicKey": {
+      "value": ""
+    }
+  }
+}
