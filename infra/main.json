@@ -1,0 +1,518 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "languageVersion": "2.0",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.41.2.15936",
+      "templateHash": "1709213173648404554"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "eastus",
+      "metadata": {
+        "description": "Azure region for all resources."
+      }
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "defaultValue": "azure-openclaw-rg",
+      "metadata": {
+        "description": "Resource group name."
+      }
+    },
+    "vmName": {
+      "type": "string",
+      "defaultValue": "azure-openclaw-vm",
+      "metadata": {
+        "description": "Virtual machine name."
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_B1ms",
+      "allowedValues": [
+        "Standard_B1ms",
+        "Standard_B2s"
+      ],
+      "metadata": {
+        "description": "VM size. Standard_B1ms = 2 vCPU / 2 GB RAM (default). Standard_B2s = 2 vCPU / 4 GB RAM."
+      }
+    },
+    "vnetName": {
+      "type": "string",
+      "defaultValue": "azure-openclaw-vnet",
+      "metadata": {
+        "description": "Virtual network name."
+      }
+    },
+    "publicIpName": {
+      "type": "string",
+      "defaultValue": "azure-openclaw-publicip",
+      "metadata": {
+        "description": "Public IP address resource name."
+      }
+    },
+    "foundryName": {
+      "type": "string",
+      "defaultValue": "azure-openclaw-foundry",
+      "metadata": {
+        "description": "Azure AI Foundry Hub name."
+      }
+    },
+    "modelName": {
+      "type": "string",
+      "defaultValue": "gpt-5.2-chat",
+      "metadata": {
+        "description": "Azure OpenAI model name (must be available in the target region)."
+      }
+    },
+    "modelDeploymentName": {
+      "type": "string",
+      "defaultValue": "openclaw-model",
+      "metadata": {
+        "description": "Azure OpenAI deployment name (used as the model alias inside the service)."
+      }
+    },
+    "openclawPort": {
+      "type": "int",
+      "defaultValue": 11434,
+      "metadata": {
+        "description": "TCP port that OpenClaw listens on. Opened in the VM Network Security Group."
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "azureuser",
+      "metadata": {
+        "description": "VM administrator username."
+      }
+    },
+    "adminSshPublicKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SSH public key for the VM administrator account (RSA, base64-encoded)."
+      }
+    }
+  },
+  "resources": {
+    "rg": {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('resourceGroupName')]",
+      "location": "[parameters('location')]"
+    },
+    "resources": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "openclaw-resources",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "vmName": {
+            "value": "[parameters('vmName')]"
+          },
+          "vmSize": {
+            "value": "[parameters('vmSize')]"
+          },
+          "vnetName": {
+            "value": "[parameters('vnetName')]"
+          },
+          "publicIpName": {
+            "value": "[parameters('publicIpName')]"
+          },
+          "foundryName": {
+            "value": "[parameters('foundryName')]"
+          },
+          "modelName": {
+            "value": "[parameters('modelName')]"
+          },
+          "modelDeploymentName": {
+            "value": "[parameters('modelDeploymentName')]"
+          },
+          "openclawPort": {
+            "value": "[parameters('openclawPort')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminSshPublicKey": {
+            "value": "[parameters('adminSshPublicKey')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "languageVersion": "2.0",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.41.2.15936",
+              "templateHash": "16001948673034989166"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "vmName": {
+              "type": "string"
+            },
+            "vmSize": {
+              "type": "string"
+            },
+            "vnetName": {
+              "type": "string"
+            },
+            "publicIpName": {
+              "type": "string"
+            },
+            "foundryName": {
+              "type": "string"
+            },
+            "modelName": {
+              "type": "string"
+            },
+            "modelDeploymentName": {
+              "type": "string"
+            },
+            "openclawPort": {
+              "type": "int"
+            },
+            "adminUsername": {
+              "type": "string"
+            },
+            "adminSshPublicKey": {
+              "type": "securestring"
+            }
+          },
+          "variables": {
+            "nsgName": "[format('{0}-nsg', parameters('vmName'))]",
+            "subnetName": "default",
+            "nicName": "[format('{0}-nic', parameters('vmName'))]",
+            "storageAccountName": "[take(format('st{0}', uniqueString(resourceGroup().id)), 24)]",
+            "keyVaultName": "[take(format('kv{0}', uniqueString(resourceGroup().id)), 24)]",
+            "openAIName": "[take(format('oai{0}', uniqueString(resourceGroup().id, parameters('foundryName'))), 24)]",
+            "openaiEndpoint": "[format('https://{0}.openai.azure.com/', variables('openAIName'))]",
+            "cloudInitContent": "#cloud-config\n# Pre-install Node.js 22, Python 3, and Git on first boot.\n# This content is base64-encoded and passed via osProfile.customData.\n\npackage_update: true\npackage_upgrade: false\n\npackages:\n  - git\n  - python3\n  - python3-pip\n  - curl\n  - jq\n\nruncmd:\n  # Install Node.js 22 from the official NodeSource repository\n  - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -\n  - apt-get install -y nodejs\n  - node --version\n  - npm --version\n",
+            "configScriptBody": "#!/bin/bash\n# configure-openclaw.sh\n#\n# Installed and configured by the Azure VM Custom Script Extension.\n# The following environment variables must be exported before sourcing\n# or running this script (injected by the Bicep template at deploy time):\n#\n#   AZURE_OPENAI_ENDPOINT  – Azure OpenAI service endpoint URL\n#   AZURE_OPENAI_APIKEY    – Azure OpenAI API key\n#\n# Usage (standalone, for local testing):\n#   export AZURE_OPENAI_ENDPOINT=\"https://<account>.openai.azure.com/\"\n#   export AZURE_OPENAI_APIKEY=\"<key>\"\n#   bash configure-openclaw.sh\n\nset -euo pipefail\n\n# ---------------------------------------------------------------------------\n# 1. Wait for cloud-init (pre-install of Node.js/Python/Git) to finish\n# ---------------------------------------------------------------------------\nif command -v cloud-init &>/dev/null; then\n    cloud-init status --wait 2>/dev/null || true\nfi\n\n# ---------------------------------------------------------------------------\n# 2. Persist environment variables for all future sessions\n# ---------------------------------------------------------------------------\n{\n    echo \"AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}\"\n    echo \"AZURE_OPENAI_APIKEY=${AZURE_OPENAI_APIKEY}\"\n} >> /etc/environment\n\necho \"[openclaw] Environment variables written to /etc/environment\"\n\n# ---------------------------------------------------------------------------\n# 3. Silent install of OpenClaw\n# ---------------------------------------------------------------------------\nif ! command -v openclaw &>/dev/null; then\n    echo \"[openclaw] Installing OpenClaw (silent, no onboarding)...\"\n    curl -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard\nelse\n    echo \"[openclaw] OpenClaw already installed, skipping install step.\"\nfi\n\n# ---------------------------------------------------------------------------\n# 4. Configure OpenClaw JSON with model endpoint and API key\n# ---------------------------------------------------------------------------\nif command -v openclaw &>/dev/null; then\n    OPENCLAW_CONFIG_DIR=\"${HOME}/.openclaw\"\n    OPENCLAW_CONFIG=\"${OPENCLAW_CONFIG_DIR}/config.json\"\n\n    mkdir -p \"${OPENCLAW_CONFIG_DIR}\"\n\n    if [ -f \"${OPENCLAW_CONFIG}\" ]; then\n        echo \"[openclaw] Patching ${OPENCLAW_CONFIG} with Azure OpenAI settings...\"\n        python3 - <<'PYEOF'\nimport json, os, sys\n\nconfig_path = os.path.expanduser(\"~/.openclaw/config.json\")\nendpoint    = os.environ.get(\"AZURE_OPENAI_ENDPOINT\", \"\")\napi_key     = os.environ.get(\"AZURE_OPENAI_APIKEY\", \"\")\n\ntry:\n    with open(config_path, \"r\") as f:\n        config = json.load(f)\nexcept (FileNotFoundError, json.JSONDecodeError):\n    config = {}\n\nconfig.setdefault(\"model\", {})\nconfig[\"model\"][\"endpoint\"] = endpoint\nconfig[\"model\"][\"apiKey\"]   = api_key\n\nwith open(config_path, \"w\") as f:\n    json.dump(config, f, indent=2)\n\nprint(\"[openclaw] config.json updated successfully\")\nPYEOF\n    else\n        echo \"[openclaw] config.json not found after install – creating minimal config...\"\n        python3 - <<'PYEOF'\nimport json, os\n\nconfig_path = os.path.expanduser(\"~/.openclaw/config.json\")\nendpoint    = os.environ.get(\"AZURE_OPENAI_ENDPOINT\", \"\")\napi_key     = os.environ.get(\"AZURE_OPENAI_APIKEY\", \"\")\n\nos.makedirs(os.path.dirname(config_path), exist_ok=True)\n\nconfig = {\n    \"model\": {\n        \"endpoint\": endpoint,\n        \"apiKey\":   api_key\n    }\n}\n\nwith open(config_path, \"w\") as f:\n    json.dump(config, f, indent=2)\n\nprint(\"[openclaw] Minimal config.json created at\", config_path)\nPYEOF\n    fi\nelse\n    echo \"[openclaw] WARNING: OpenClaw not found in PATH after install attempt.\"\n    exit 1\nfi\n\necho \"[openclaw] Configuration complete.\"\n"
+          },
+          "resources": {
+            "nsg": {
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-11-01",
+              "name": "[variables('nsgName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "securityRules": [
+                  {
+                    "name": "allow-ssh",
+                    "properties": {
+                      "priority": 100,
+                      "protocol": "Tcp",
+                      "access": "Allow",
+                      "direction": "Inbound",
+                      "sourceAddressPrefix": "*",
+                      "sourcePortRange": "*",
+                      "destinationAddressPrefix": "*",
+                      "destinationPortRange": "22",
+                      "description": "Allow inbound SSH for VM management"
+                    }
+                  },
+                  {
+                    "name": "allow-openclaw",
+                    "properties": {
+                      "priority": 110,
+                      "protocol": "Tcp",
+                      "access": "Allow",
+                      "direction": "Inbound",
+                      "sourceAddressPrefix": "*",
+                      "sourcePortRange": "*",
+                      "destinationAddressPrefix": "*",
+                      "destinationPortRange": "[string(parameters('openclawPort'))]",
+                      "description": "Allow inbound traffic on the OpenClaw service port"
+                    }
+                  }
+                ]
+              }
+            },
+            "vnet": {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-11-01",
+              "name": "[parameters('vnetName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "10.0.0.0/16"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "[variables('subnetName')]",
+                    "properties": {
+                      "addressPrefix": "10.0.0.0/24",
+                      "networkSecurityGroup": {
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+                      }
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "nsg"
+              ]
+            },
+            "publicIp": {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2023-11-01",
+              "name": "[parameters('publicIpName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+              },
+              "properties": {
+                "publicIPAllocationMethod": "Static",
+                "dnsSettings": {
+                  "domainNameLabel": "[toLower(replace(parameters('vmName'), '_', '-'))]"
+                }
+              }
+            },
+            "nic": {
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2023-11-01",
+              "name": "[variables('nicName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "name": "ipconfig1",
+                    "properties": {
+                      "subnet": {
+                        "id": "[format('{0}/subnets/{1}', resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName')), variables('subnetName'))]"
+                      },
+                      "privateIPAllocationMethod": "Dynamic",
+                      "publicIPAddress": {
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIpName'))]"
+                      }
+                    }
+                  }
+                ],
+                "networkSecurityGroup": {
+                  "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+                }
+              },
+              "dependsOn": [
+                "nsg",
+                "publicIp",
+                "vnet"
+              ]
+            },
+            "storageAccount": {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-04-01",
+              "name": "[variables('storageAccountName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "supportsHttpsTrafficOnly": true,
+                "minimumTlsVersion": "TLS1_2",
+                "allowBlobPublicAccess": false
+              }
+            },
+            "keyVault": {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-07-01",
+              "name": "[variables('keyVaultName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "enableRbacAuthorization": true,
+                "enableSoftDelete": true,
+                "softDeleteRetentionInDays": 7,
+                "publicNetworkAccess": "Enabled"
+              }
+            },
+            "aiHub": {
+              "type": "Microsoft.MachineLearningServices/workspaces",
+              "apiVersion": "2024-04-01",
+              "name": "[parameters('foundryName')]",
+              "location": "[parameters('location')]",
+              "kind": "Hub",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "sku": {
+                "name": "Basic",
+                "tier": "Basic"
+              },
+              "properties": {
+                "friendlyName": "[parameters('foundryName')]",
+                "storageAccount": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+                "keyVault": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+                "hbiWorkspace": false
+              },
+              "dependsOn": [
+                "keyVault",
+                "storageAccount"
+              ]
+            },
+            "openAI": {
+              "type": "Microsoft.CognitiveServices/accounts",
+              "apiVersion": "2023-05-01",
+              "name": "[variables('openAIName')]",
+              "location": "[parameters('location')]",
+              "kind": "OpenAI",
+              "sku": {
+                "name": "S0"
+              },
+              "properties": {
+                "customSubDomainName": "[variables('openAIName')]",
+                "publicNetworkAccess": "Enabled"
+              }
+            },
+            "modelDeployment": {
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', variables('openAIName'), parameters('modelDeploymentName'))]",
+              "sku": {
+                "name": "Standard",
+                "capacity": 30
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "[parameters('modelName')]"
+                }
+              },
+              "dependsOn": [
+                "openAI"
+              ]
+            },
+            "vm": {
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('vmName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "hardwareProfile": {
+                  "vmSize": "[parameters('vmSize')]"
+                },
+                "storageProfile": {
+                  "imageReference": {
+                    "publisher": "Canonical",
+                    "offer": "0001-com-ubuntu-server-jammy",
+                    "sku": "22_04-lts-gen2",
+                    "version": "latest"
+                  },
+                  "osDisk": {
+                    "name": "[format('{0}-osdisk', parameters('vmName'))]",
+                    "caching": "ReadWrite",
+                    "createOption": "FromImage",
+                    "managedDisk": {
+                      "storageAccountType": "StandardSSD_LRS"
+                    }
+                  }
+                },
+                "osProfile": {
+                  "computerName": "[parameters('vmName')]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "customData": "[base64(variables('cloudInitContent'))]",
+                  "linuxConfiguration": {
+                    "disablePasswordAuthentication": true,
+                    "ssh": {
+                      "publicKeys": [
+                        {
+                          "path": "[format('/home/{0}/.ssh/authorized_keys', parameters('adminUsername'))]",
+                          "keyData": "[parameters('adminSshPublicKey')]"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "nic"
+              ]
+            },
+            "vmCustomScript": {
+              "type": "Microsoft.Compute/virtualMachines/extensions",
+              "apiVersion": "2024-03-01",
+              "name": "[format('{0}/{1}', parameters('vmName'), 'configure-openclaw')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "publisher": "Microsoft.Azure.Extensions",
+                "type": "CustomScript",
+                "typeHandlerVersion": "2.1",
+                "autoUpgradeMinorVersion": true,
+                "protectedSettings": {
+                  "script": "[base64(format('{0}{1}', format('#!/bin/bash\nset -euo pipefail\n\nexport AZURE_OPENAI_ENDPOINT=''{0}''\nexport AZURE_OPENAI_APIKEY=''{1}''\n\n', variables('openaiEndpoint'), listKeys('openAI', '2023-05-01').key1), variables('configScriptBody')))]"
+                }
+              },
+              "dependsOn": [
+                "openAI",
+                "vm"
+              ]
+            }
+          },
+          "outputs": {
+            "publicIpAddress": {
+              "type": "string",
+              "value": "[reference('publicIp').ipAddress]"
+            },
+            "openaiEndpoint": {
+              "type": "string",
+              "value": "[variables('openaiEndpoint')]"
+            },
+            "openaiApiKey": {
+              "type": "securestring",
+              "value": "[listKeys('openAI', '2023-05-01').key1]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "rg"
+      ]
+    }
+  },
+  "outputs": {
+    "AZURE_OPENCLAW_PUBLICIP": {
+      "type": "string",
+      "value": "[reference('resources').outputs.publicIpAddress.value]"
+    },
+    "AZURE_OPENAI_ENDPOINT": {
+      "type": "string",
+      "value": "[reference('resources').outputs.openaiEndpoint.value]"
+    },
+    "AZURE_OPENAI_APIKEY": {
+      "type": "securestring",
+      "value": "[listOutputsWithSecureValues('resources', '2025-04-01').openaiApiKey]"
+    }
+  }
+}
