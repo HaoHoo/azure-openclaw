@@ -1,0 +1,16 @@
+{
+  "name": "openclaw-dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-azurecli",
+        "ms-azuretools.azure-dev",
+        "ms-vscode.azure-account"
+      ]
+    }
+  },
+  "postCreateCommand": "azd version || true"
+}
