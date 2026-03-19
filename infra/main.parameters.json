@@ -5,6 +5,9 @@
     "location": {
       "value": "eastus"
     },
+    "resourcesNamePrefix": {
+      "value": "azure-openclaw"
+    },
     "resourceGroupName": {
       "value": "azure-openclaw-rg"
     },
@@ -27,10 +30,10 @@
       "value": "gpt-5.2-chat"
     },
     "modelDeploymentName": {
-      "value": "openclaw-model"
+      "value": "gpt-5.2-chat"
     },
     "openclawPort": {
-      "value": 11434
+      "value": 18789
     },
     "adminUsername": {
       "value": "azureuser"

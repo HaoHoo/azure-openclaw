@@ -9,11 +9,14 @@ targetScope = 'subscription'
 @description('Azure region for all resources.')
 param location string = 'eastus'
 
+@description('Prefix for all resource names (VM, VNet, NSG, etc.).')
+param openclawName string = 'azure-openclaw'
+
 @description('Resource group name.')
-param resourceGroupName string = 'azure-openclaw-rg'
+param resourceGroupName string = toLower('${openclawName}-rg')
 
 @description('Virtual machine name.')
-param vmName string = 'azure-openclaw-vm'
+param vmName string = toLower('${openclawName}-vm')
 
 @description('VM size. Standard_B1ms = 2 vCPU / 2 GB RAM (default). Standard_B2s = 2 vCPU / 4 GB RAM.')
 @allowed([
@@ -23,29 +26,40 @@ param vmName string = 'azure-openclaw-vm'
 param vmSize string = 'Standard_B1ms'
 
 @description('Virtual network name.')
-param vnetName string = 'azure-openclaw-vnet'
+param vnetName string = toLower('${openclawName}-vnet')
 
 @description('Public IP address resource name.')
-param publicIpName string = 'azure-openclaw-publicip'
+param publicIpName string = toLower('${openclawName}-publicip')
 
 @description('Azure AI Foundry Hub name.')
-param foundryName string = 'azure-openclaw-foundry'
+param foundryName string = toLower('${openclawName}-foundry')
 
 @description('Azure OpenAI model name (must be available in the target region).')
 param modelName string = 'gpt-5.2-chat'
 
-@description('Azure OpenAI deployment name (used as the model alias inside the service).')
-param modelDeploymentName string = 'openclaw-model'
-
 @description('TCP port that OpenClaw listens on. Opened in the VM Network Security Group.')
-param openclawPort int = 11434
+param openclawPort int = 18789
 
 @description('VM administrator username.')
 param adminUsername string = 'azureuser'
 
-@description('SSH public key for the VM administrator account (RSA, base64-encoded).')
+@description('VM administrator password (if not using SSH key authentication). Must meet Azure complexity requirements.')
 @secure()
-param adminSshPublicKey string
+param adminPassword string
+
+@description('是否在部署时使用 Spot 虚拟机（默认 false）。')
+param spotVM bool = false
+
+@description('Spot VM 的最大价格（美元）。-1 表示使用市场默认价。')
+param spotMaxPrice int = -1
+
+@description('是否为 Public IP 使用动态分配（默认 false）。')
+param dynaIP bool = false
+@description('Git URL containing the helper scripts deployed to the VM.')
+param scriptsRepoUrl string = 'https://github.com/HaoHoo/azure-opencalw.git'
+@description('Git ref or branch to check out when cloning the helper scripts repo.')
+param scriptsRepoRef string = 'main'
+
 
 // ============================================================
 // Resource Group
@@ -60,7 +74,7 @@ resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
 // All Azure Resources (network, VM, AI Foundry, OpenAI)
 // ============================================================
 
-module resources './all-resources.bicep' = {
+module resources './resources.bicep' = {
   scope: rg
   name: 'openclaw-resources'
   params: {
@@ -71,10 +85,15 @@ module resources './all-resources.bicep' = {
     publicIpName: publicIpName
     foundryName: foundryName
     modelName: modelName
-    modelDeploymentName: modelDeploymentName
     openclawPort: openclawPort
     adminUsername: adminUsername
-    adminSshPublicKey: adminSshPublicKey
+    adminPassword: adminPassword
+    openclawName: openclawName
+    spotVM: spotVM
+    spotMaxPrice: spotMaxPrice
+    dynaIP: dynaIP
+    scriptsRepoUrl: scriptsRepoUrl
+    scriptsRepoRef: scriptsRepoRef
   }
 }
 
@@ -83,7 +102,8 @@ module resources './all-resources.bicep' = {
 // ============================================================
 
 output AZURE_OPENCLAW_PUBLICIP string = resources.outputs.publicIpAddress
+output AZURE_OPENCLAW_PORT int = resources.outputs.openclawPort
+output AZURE_OPENAI_MODEL string = resources.outputs.modelName
 output AZURE_OPENAI_ENDPOINT string = resources.outputs.openaiEndpoint
-
 @secure()
 output AZURE_OPENAI_APIKEY string = resources.outputs.openaiApiKey
