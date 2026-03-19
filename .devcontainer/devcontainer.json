@@ -12,5 +12,5 @@
       ]
     }
   },
-  "postCreateCommand": "azd version || true"
+  "postCreateCommand": "install-azure-tools.sh &"
 }
