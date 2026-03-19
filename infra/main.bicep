@@ -1,4 +1,4 @@
-targetScope = 'subscription'
+targetScope = 'resourceGroup'
 
 // ============================================================
 // Parameters – every value has an AZD-friendly default that
@@ -12,8 +12,6 @@ param location string = 'eastus'
 @description('Prefix for all resource names (VM, VNet, NSG, etc.).')
 param openclawName string = 'azure-openclaw'
 
-@description('Resource group name.')
-param resourceGroupName string = toLower('${openclawName}-rg')
 
 @description('Virtual machine name.')
 param vmName string = toLower('${openclawName}-vm')
@@ -35,7 +33,7 @@ param publicIpName string = toLower('${openclawName}-publicip')
 param foundryName string = toLower('${openclawName}-foundry')
 
 @description('Azure OpenAI model name (must be available in the target region).')
-param modelName string = 'gpt-5.2-chat'
+param modelName string = 'gpt-4o'
 
 @description('TCP port that OpenClaw listens on. Opened in the VM Network Security Group.')
 param openclawPort int = 18789
@@ -56,26 +54,16 @@ param spotMaxPrice int = -1
 @description('是否为 Public IP 使用动态分配（默认 false）。')
 param dynaIP bool = false
 @description('Git URL containing the helper scripts deployed to the VM.')
-param scriptsRepoUrl string = 'https://github.com/HaoHoo/azure-opencalw.git'
+param scriptsRepoUrl string = 'https://github.com/HaoHoo/azure-openclaw.git'
 @description('Git ref or branch to check out when cloning the helper scripts repo.')
 param scriptsRepoRef string = 'main'
 
-
-// ============================================================
-// Resource Group
-// ============================================================
-
-resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
-  name: resourceGroupName
-  location: location
-}
 
 // ============================================================
 // All Azure Resources (network, VM, AI Foundry, OpenAI)
 // ============================================================
 
 module resources './resources.bicep' = {
-  scope: rg
   name: 'openclaw-resources'
   params: {
     location: location

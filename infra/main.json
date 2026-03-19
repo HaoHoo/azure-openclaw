@@ -1,12 +1,12 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "languageVersion": "2.0",
   "contentVersion": "1.0.0.0",
   "metadata": {
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "1709213173648404554"
+      "templateHash": "3338097203523417985"
     }
   },
   "parameters": {
@@ -17,16 +17,16 @@
         "description": "Azure region for all resources."
       }
     },
-    "resourceGroupName": {
+    "openclawName": {
       "type": "string",
-      "defaultValue": "azure-openclaw-rg",
+      "defaultValue": "azure-openclaw",
       "metadata": {
-        "description": "Resource group name."
+        "description": "Prefix for all resource names (VM, VNet, NSG, etc.)."
       }
     },
     "vmName": {
       "type": "string",
-      "defaultValue": "azure-openclaw-vm",
+      "defaultValue": "[toLower(format('{0}-vm', parameters('openclawName')))]",
       "metadata": {
         "description": "Virtual machine name."
       }
@@ -44,21 +44,21 @@
     },
     "vnetName": {
       "type": "string",
-      "defaultValue": "azure-openclaw-vnet",
+      "defaultValue": "[toLower(format('{0}-vnet', parameters('openclawName')))]",
       "metadata": {
         "description": "Virtual network name."
       }
     },
     "publicIpName": {
       "type": "string",
-      "defaultValue": "azure-openclaw-publicip",
+      "defaultValue": "[toLower(format('{0}-publicip', parameters('openclawName')))]",
       "metadata": {
         "description": "Public IP address resource name."
       }
     },
     "foundryName": {
       "type": "string",
-      "defaultValue": "azure-openclaw-foundry",
+      "defaultValue": "[toLower(format('{0}-foundry', parameters('openclawName')))]",
       "metadata": {
         "description": "Azure AI Foundry Hub name."
       }
@@ -70,16 +70,9 @@
         "description": "Azure OpenAI model name (must be available in the target region)."
       }
     },
-    "modelDeploymentName": {
-      "type": "string",
-      "defaultValue": "openclaw-model",
-      "metadata": {
-        "description": "Azure OpenAI deployment name (used as the model alias inside the service)."
-      }
-    },
     "openclawPort": {
       "type": "int",
-      "defaultValue": 11434,
+      "defaultValue": 18789,
       "metadata": {
         "description": "TCP port that OpenClaw listens on. Opened in the VM Network Security Group."
       }
@@ -91,25 +84,53 @@
         "description": "VM administrator username."
       }
     },
-    "adminSshPublicKey": {
+    "adminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "SSH public key for the VM administrator account (RSA, base64-encoded)."
+        "description": "VM administrator password (if not using SSH key authentication). Must meet Azure complexity requirements."
+      }
+    },
+    "spotVM": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "是否在部署时使用 Spot 虚拟机（默认 false）。"
+      }
+    },
+    "spotMaxPrice": {
+      "type": "int",
+      "defaultValue": -1,
+      "metadata": {
+        "description": "Spot VM 的最大价格（美元）。-1 表示使用市场默认价。"
+      }
+    },
+    "dynaIP": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "是否为 Public IP 使用动态分配（默认 false）。"
+      }
+    },
+    "scriptsRepoUrl": {
+      "type": "string",
+      "defaultValue": "https://github.com/HaoHoo/azure-opencalw.git",
+      "metadata": {
+        "description": "Git URL containing the helper scripts deployed to the VM."
+      }
+    },
+    "scriptsRepoRef": {
+      "type": "string",
+      "defaultValue": "main",
+      "metadata": {
+        "description": "Git ref or branch to check out when cloning the helper scripts repo."
       }
     }
   },
   "resources": {
-    "rg": {
-      "type": "Microsoft.Resources/resourceGroups",
-      "apiVersion": "2024-03-01",
-      "name": "[parameters('resourceGroupName')]",
-      "location": "[parameters('location')]"
-    },
     "resources": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
       "name": "openclaw-resources",
-      "resourceGroup": "[parameters('resourceGroupName')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -137,17 +158,32 @@
           "modelName": {
             "value": "[parameters('modelName')]"
           },
-          "modelDeploymentName": {
-            "value": "[parameters('modelDeploymentName')]"
-          },
           "openclawPort": {
             "value": "[parameters('openclawPort')]"
           },
           "adminUsername": {
             "value": "[parameters('adminUsername')]"
           },
-          "adminSshPublicKey": {
-            "value": "[parameters('adminSshPublicKey')]"
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "openclawName": {
+            "value": "[parameters('openclawName')]"
+          },
+          "spotVM": {
+            "value": "[parameters('spotVM')]"
+          },
+          "spotMaxPrice": {
+            "value": "[parameters('spotMaxPrice')]"
+          },
+          "dynaIP": {
+            "value": "[parameters('dynaIP')]"
+          },
+          "scriptsRepoUrl": {
+            "value": "[parameters('scriptsRepoUrl')]"
+          },
+          "scriptsRepoRef": {
+            "value": "[parameters('scriptsRepoRef')]"
           }
         },
         "template": {
@@ -158,33 +194,41 @@
             "_generator": {
               "name": "bicep",
               "version": "0.41.2.15936",
-              "templateHash": "16001948673034989166"
+              "templateHash": "10147442053166576114"
             }
           },
           "parameters": {
             "location": {
               "type": "string"
             },
-            "vmName": {
+            "openclawName": {
               "type": "string"
+            },
+            "vmName": {
+              "type": "string",
+              "defaultValue": "[format('{0}-vm', parameters('openclawName'))]"
             },
             "vmSize": {
               "type": "string"
             },
             "vnetName": {
-              "type": "string"
+              "type": "string",
+              "defaultValue": "[format('{0}-vnet', parameters('openclawName'))]"
             },
             "publicIpName": {
-              "type": "string"
+              "type": "string",
+              "defaultValue": "[format('{0}-publicip', parameters('openclawName'))]"
             },
             "foundryName": {
-              "type": "string"
+              "type": "string",
+              "defaultValue": "[format('{0}-foundry', parameters('openclawName'))]"
             },
             "modelName": {
               "type": "string"
             },
             "modelDeploymentName": {
-              "type": "string"
+              "type": "string",
+              "defaultValue": "[parameters('modelName')]"
             },
             "openclawPort": {
               "type": "int"
@@ -192,20 +236,51 @@
             "adminUsername": {
               "type": "string"
             },
-            "adminSshPublicKey": {
+            "adminPassword": {
               "type": "securestring"
+            },
+            "spotVM": {
+              "type": "bool",
+              "defaultValue": false
+            },
+            "spotMaxPrice": {
+              "type": "int",
+              "defaultValue": -1
+            },
+            "dynaIP": {
+              "type": "bool",
+              "defaultValue": false
+            },
+            "scriptsRepoUrl": {
+              "type": "string",
+              "defaultValue": "https://github.com/HaoHoo/azure-opencalw.git",
+              "metadata": {
+                "description": "Git URL containing the helper scripts deployed to the VM."
+              }
+            },
+            "scriptsRepoRef": {
+              "type": "string",
+              "defaultValue": "main",
+              "metadata": {
+                "description": "Git ref or branch used when cloning the helper scripts repo."
+              }
             }
           },
           "variables": {
             "nsgName": "[format('{0}-nsg', parameters('vmName'))]",
             "subnetName": "default",
             "nicName": "[format('{0}-nic', parameters('vmName'))]",
-            "storageAccountName": "[take(format('st{0}', uniqueString(resourceGroup().id)), 24)]",
-            "keyVaultName": "[take(format('kv{0}', uniqueString(resourceGroup().id)), 24)]",
-            "openAIName": "[take(format('oai{0}', uniqueString(resourceGroup().id, parameters('foundryName'))), 24)]",
+            "compactName": "[replace(toLower(parameters('openclawName')), '-', '')]",
+            "infraDir": "[format('/home/{0}/infra', parameters('adminUsername'))]",
+            "resourceGroupName": "[resourceGroup().name]",
+            "storageAccountName": "[take(format('{0}st{1}', variables('compactName'), uniqueString(resourceGroup().id, 'st')), 24)]",
+            "keyVaultName": "[take(format('{0}-kv{1}', variables('compactName'), uniqueString(resourceGroup().id, 'kv')), 24)]",
+            "openAIName": "[take(format('{0}oai{1}', variables('compactName'), uniqueString(resourceGroup().id, 'oai')), 24)]",
             "openaiEndpoint": "[format('https://{0}.openai.azure.com/', variables('openAIName'))]",
-            "cloudInitContent": "#cloud-config\n# Pre-install Node.js 22, Python 3, and Git on first boot.\n# This content is base64-encoded and passed via osProfile.customData.\n\npackage_update: true\npackage_upgrade: false\n\npackages:\n  - git\n  - python3\n  - python3-pip\n  - curl\n  - jq\n\nruncmd:\n  # Install Node.js 22 from the official NodeSource repository\n  - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -\n  - apt-get install -y nodejs\n  - node --version\n  - npm --version\n",
-            "configScriptBody": "#!/bin/bash\n# configure-openclaw.sh\n#\n# Installed and configured by the Azure VM Custom Script Extension.\n# The following environment variables must be exported before sourcing\n# or running this script (injected by the Bicep template at deploy time):\n#\n#   AZURE_OPENAI_ENDPOINT  – Azure OpenAI service endpoint URL\n#   AZURE_OPENAI_APIKEY    – Azure OpenAI API key\n#\n# Usage (standalone, for local testing):\n#   export AZURE_OPENAI_ENDPOINT=\"https://<account>.openai.azure.com/\"\n#   export AZURE_OPENAI_APIKEY=\"<key>\"\n#   bash configure-openclaw.sh\n\nset -euo pipefail\n\n# ---------------------------------------------------------------------------\n# 1. Wait for cloud-init (pre-install of Node.js/Python/Git) to finish\n# ---------------------------------------------------------------------------\nif command -v cloud-init &>/dev/null; then\n    cloud-init status --wait 2>/dev/null || true\nfi\n\n# ---------------------------------------------------------------------------\n# 2. Persist environment variables for all future sessions\n# ---------------------------------------------------------------------------\n{\n    echo \"AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}\"\n    echo \"AZURE_OPENAI_APIKEY=${AZURE_OPENAI_APIKEY}\"\n} >> /etc/environment\n\necho \"[openclaw] Environment variables written to /etc/environment\"\n\n# ---------------------------------------------------------------------------\n# 3. Silent install of OpenClaw\n# ---------------------------------------------------------------------------\nif ! command -v openclaw &>/dev/null; then\n    echo \"[openclaw] Installing OpenClaw (silent, no onboarding)...\"\n    curl -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard\nelse\n    echo \"[openclaw] OpenClaw already installed, skipping install step.\"\nfi\n\n# ---------------------------------------------------------------------------\n# 4. Configure OpenClaw JSON with model endpoint and API key\n# ---------------------------------------------------------------------------\nif command -v openclaw &>/dev/null; then\n    OPENCLAW_CONFIG_DIR=\"${HOME}/.openclaw\"\n    OPENCLAW_CONFIG=\"${OPENCLAW_CONFIG_DIR}/config.json\"\n\n    mkdir -p \"${OPENCLAW_CONFIG_DIR}\"\n\n    if [ -f \"${OPENCLAW_CONFIG}\" ]; then\n        echo \"[openclaw] Patching ${OPENCLAW_CONFIG} with Azure OpenAI settings...\"\n        python3 - <<'PYEOF'\nimport json, os, sys\n\nconfig_path = os.path.expanduser(\"~/.openclaw/config.json\")\nendpoint    = os.environ.get(\"AZURE_OPENAI_ENDPOINT\", \"\")\napi_key     = os.environ.get(\"AZURE_OPENAI_APIKEY\", \"\")\n\ntry:\n    with open(config_path, \"r\") as f:\n        config = json.load(f)\nexcept (FileNotFoundError, json.JSONDecodeError):\n    config = {}\n\nconfig.setdefault(\"model\", {})\nconfig[\"model\"][\"endpoint\"] = endpoint\nconfig[\"model\"][\"apiKey\"]   = api_key\n\nwith open(config_path, \"w\") as f:\n    json.dump(config, f, indent=2)\n\nprint(\"[openclaw] config.json updated successfully\")\nPYEOF\n    else\n        echo \"[openclaw] config.json not found after install – creating minimal config...\"\n        python3 - <<'PYEOF'\nimport json, os\n\nconfig_path = os.path.expanduser(\"~/.openclaw/config.json\")\nendpoint    = os.environ.get(\"AZURE_OPENAI_ENDPOINT\", \"\")\napi_key     = os.environ.get(\"AZURE_OPENAI_APIKEY\", \"\")\n\nos.makedirs(os.path.dirname(config_path), exist_ok=True)\n\nconfig = {\n    \"model\": {\n        \"endpoint\": endpoint,\n        \"apiKey\":   api_key\n    }\n}\n\nwith open(config_path, \"w\") as f:\n    json.dump(config, f, indent=2)\n\nprint(\"[openclaw] Minimal config.json created at\", config_path)\nPYEOF\n    fi\nelse\n    echo \"[openclaw] WARNING: OpenClaw not found in PATH after install attempt.\"\n    exit 1\nfi\n\necho \"[openclaw] Configuration complete.\"\n"
+            "cloudInitTemplate": "#cloud-config\n# Pre-install Node.js 22, Python 3, Azure CLI, and Git on first boot.\n# This content is base64-encoded and passed via osProfile.customData.\n\npackage_update: true\npackage_upgrade: false\n\npackages:\n  - git\n  - python3\n  - python3-pip\n  - curl\n  - jq\n\nruncmd:\n  # Install Node.js 22 from the official NodeSource repository\n  - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -\n  - apt-get install -y nodejs\n  - node --version\n  - npm --version\n  - curl -sL https://aka.ms/InstallAzureCLIDeb | bash\n  - az version\n",
+            "cloudInitContent": "[replace(variables('cloudInitTemplate'), '__ADMIN_USERNAME__', parameters('adminUsername'))]",
+            "configScriptBody": "#!/bin/bash\n# set-openclaw.sh\n#\n# Installed and configured by the Azure VM Custom Script Extension.\n# Variables exported by the Bicep template:\n#   AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_APIKEY, AZURE_OPENAI_ACCOUNT_NAME,\n#   AZURE_RESOURCE_GROUP_NAME, AZURE_REGION, AZURE_MODEL_NAME,\n#   AZURE_MODEL_DEPLOYMENT_NAME, AZURE_OPENAI_RESOURCE_GROUP, AZURE_OPENCLAW_PORT,\n#   AZURE_INFRA_DIR, AZURE_RESOURCE_JSON_PATH, AZURE_DNS_JSON_PATH,\n#   AZURE_DYNAMIC_IP, AZURE_ADMIN_USERNAME,\n#   AZURE_SCRIPTS_REPO_URL, AZURE_SCRIPTS_REPO_REF\n\nset -euo pipefail\n\nif command -v cloud-init &>/dev/null; then\n    cloud-init status --wait 2>/dev/null || true\nfi\n\nADMIN_HOME=\"/home/${AZURE_ADMIN_USERNAME}\"\nSCRIPTS_DIR=\"${ADMIN_HOME}/scripts\"\nTMP_SCRIPTS_REPO=\"/tmp/azure-openclaw-scripts\"\nREPO_URL=\"${AZURE_SCRIPTS_REPO_URL:-https://github.com/HaoHoo/azure-opencalw.git}\"\nREPO_REF=\"${AZURE_SCRIPTS_REPO_REF:-main}\"\nDYNAMIC_IP_ENABLED=\"${AZURE_DYNAMIC_IP:-false}\"\n\nmkdir -p \"${SCRIPTS_DIR}\"\n\nclone_scripts() {\n    if ! command -v git &>/dev/null; then\n        echo \"[openclaw] git is unavailable; skipping helper script sync\"\n        return\n    fi\n\n    rm -rf \"${TMP_SCRIPTS_REPO}\"\n    if git clone --depth 1 --branch \"${REPO_REF}\" \"${REPO_URL}\" \"${TMP_SCRIPTS_REPO}\" >/tmp/openclaw-clone.log 2>&1; then\n        rm -rf \"${SCRIPTS_DIR}\"\n        mkdir -p \"${SCRIPTS_DIR}\"\n        if [[ -d \"${TMP_SCRIPTS_REPO}/scripts\" ]]; then\n            cp -R \"${TMP_SCRIPTS_REPO}/scripts/.\" \"${SCRIPTS_DIR}/\"\n        fi\n        chown -R \"${AZURE_ADMIN_USERNAME}:${AZURE_ADMIN_USERNAME}\" \"${SCRIPTS_DIR}\"\n        find \"${SCRIPTS_DIR}\" -type f -name '*.sh' -exec chmod +x {} +\n    else\n        echo \"[openclaw] Failed to clone ${REPO_URL}@${REPO_REF}; keeping existing helpers if any\" >&2\n    fi\n    rm -rf \"${TMP_SCRIPTS_REPO}\"\n}\n\nclone_scripts\n\npython3 - <<'PYEOF'\nimport datetime\nimport json\nimport os\nimport pathlib\n\nresource_path = os.path.expanduser(os.environ.get('AZURE_RESOURCE_JSON_PATH', ''))\nif not resource_path:\n    raise SystemExit('AZURE_RESOURCE_JSON_PATH is not set')\n\nos.makedirs(os.path.dirname(resource_path), exist_ok=True)\n\nentry = {\n    'deploymentName': os.environ.get('AZURE_MODEL_DEPLOYMENT_NAME', ''),\n    'modelName': os.environ.get('AZURE_MODEL_NAME', ''),\n    'accountName': os.environ.get('AZURE_OPENAI_ACCOUNT_NAME', ''),\n    'resourceGroup': os.environ.get('AZURE_OPENAI_RESOURCE_GROUP', os.environ.get('AZURE_RESOURCE_GROUP_NAME', '')),\n    'region': os.environ.get('AZURE_REGION', ''),\n    'endpoint': os.environ.get('AZURE_OPENAI_ENDPOINT', ''),\n    'lastUpdated': datetime.datetime.utcnow().isoformat() + 'Z',\n    'adminUsername': os.environ.get('AZURE_ADMIN_USERNAME', ''),\n    'openclawPort': os.environ.get('AZURE_OPENCLAW_PORT', ''),\n    'modelDeploymentName': os.environ.get('AZURE_MODEL_DEPLOYMENT_NAME', ''),\n    'dynamicIp': os.environ.get('AZURE_DYNAMIC_IP', 'false').lower() == 'true',\n    'scriptsRepoUrl': os.environ.get('AZURE_SCRIPTS_REPO_URL', ''),\n    'scriptsRepoRef': os.environ.get('AZURE_SCRIPTS_REPO_REF', '')\n}\n\ntry:\n    data = json.loads(pathlib.Path(resource_path).read_text())\nexcept (FileNotFoundError, json.JSONDecodeError):\n    data = {}\n\nmodels = data.setdefault('models', [])\nfor idx, model in enumerate(models):\n    if (model.get('deploymentName') == entry['deploymentName'] and\n            model.get('accountName') == entry['accountName']):\n        models[idx] = {**model, **entry}\n        break\nelse:\n    models.append(entry)\n\npathlib.Path(resource_path).write_text(json.dumps(data, indent=2))\nprint('[openclaw] Resource metadata persisted to', resource_path)\nPYEOF\n\nif ! command -v openclaw &>/dev/null; then\n    echo \"[openclaw] Installing OpenClaw (silent, no onboarding)...\"\n    curl -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard\nelse\n    echo \"[openclaw] OpenClaw already installed, skipping install step.\"\nfi\n\nOPENCLAW_CONFIG_DIR=\"${ADMIN_HOME}/.openclaw\"\nOPENCLAW_ENV_FILE=\"${OPENCLAW_CONFIG_DIR}/.env\"\nOPENCLAW_CONFIG=\"${OPENCLAW_CONFIG_DIR}/openclaw.json\"\nBASE_URL=\"${AZURE_OPENAI_ENDPOINT%/}/openai/v1\"\nWORKSPACE_DIR=\"${OPENCLAW_CONFIG_DIR}/workspace\"\n\nmkdir -p \"${OPENCLAW_CONFIG_DIR}\"\ncat <<EOF > \"${OPENCLAW_ENV_FILE}\"\nAZURE_OPENAI_MODEL=${AZURE_OPENAI_MODEL:-${AZURE_MODEL_NAME}}\nAZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}\nAZURE_OPENAI_ACCOUNT_NAME=${AZURE_OPENAI_ACCOUNT_NAME}\nAZURE_OPENAI_RESOURCE_GROUP=${AZURE_OPENAI_RESOURCE_GROUP}\nAZURE_MODEL_NAME=${AZURE_MODEL_NAME}\nAZURE_MODEL_DEPLOYMENT_NAME=${AZURE_MODEL_DEPLOYMENT_NAME}\nAZURE_RESOURCE_JSON_PATH=${AZURE_RESOURCE_JSON_PATH}\nAZURE_ADMIN_USERNAME=${AZURE_ADMIN_USERNAME}\nAZURE_OPENCLAW_PORT=${AZURE_OPENCLAW_PORT}\nAZURE_DYNAMIC_IP=${AZURE_DYNAMIC_IP:-false}\nAZURE_DNS_JSON_PATH=${AZURE_DNS_JSON_PATH:-${SCRIPTS_DIR}/update-dns/ddns.json}\nAZURE_SCRIPTS_REPO_URL=${REPO_URL}\nAZURE_SCRIPTS_REPO_REF=${REPO_REF}\nEOF\n\nmkdir -p \"${WORKSPACE_DIR}\"\nexport OPENCLAW_CONFIG BASE_URL WORKSPACE_DIR AZURE_OPENCLAW_PORT OPENCLAW_ENV_FILE\npython3 - <<'PYEOF'\nimport json\nimport os\nfrom pathlib import Path\n\nconfig_path = Path(os.environ['OPENCLAW_CONFIG'])\ntry:\n    data = json.loads(config_path.read_text())\nexcept (FileNotFoundError, json.JSONDecodeError):\n    data = {}\n\ndata.setdefault('meta', {})\ndata['meta'].update({'name': 'Azure-OpenClaw', 'version': '1.0.0'})\n\nmodels = data.setdefault('models', {})\nmodels['mode'] = 'merge'\nproviders = models.setdefault('providers', {})\nazure_provider = providers.setdefault('azure-openai', {})\nazure_provider.update({\n    'baseUrl': os.environ['BASE_URL'],\n    'apiKey': os.environ['AZURE_OPENAI_APIKEY'],\n    'auth': 'api-key'\n})\n\nmodel_id = os.environ.get('AZURE_OPENAI_MODEL', os.environ.get('AZURE_MODEL_NAME', ''))\nif model_id:\n    model_entry = {\n        'id': model_id,\n        'name': f\"{model_id}(Azure)\",\n        'api': 'openai-completions'\n    }\n    models_list = azure_provider.setdefault('models', [])\n    for idx, model in enumerate(models_list):\n        if model.get('id') == model_id:\n            models_list[idx].update(model_entry)\n            break\n    else:\n        models_list.append(model_entry)\n\nagents = data.setdefault('agents', {})\ndefaults = agents.setdefault('defaults', {})\ndefaults.update({\n    'model': f\"azure-openai/{model_id}\",\n    'workspace': os.environ['WORKSPACE_DIR']\n})\n\ngateway = data.setdefault('gateway', {})\ngateway.update({\n    'port': int(os.environ['AZURE_OPENCLAW_PORT']),\n    'host': '0.0.0.0',\n    'mode': 'local',\n    'trustProxy': True\n})\n\nconfig_path.write_text(json.dumps(data, indent=2))\nprint(f\"[openclaw] Configuration persisted to {config_path} and {os.environ['OPENCLAW_ENV_FILE']}\")\nPYEOF\n\necho \"[openclaw] Configuration complete.\"\n\nrun_set_dync_dns() {\n    if [[ \"${DYNAMIC_IP_ENABLED}\" == \"true\" ]] && [[ -x \"${SCRIPTS_DIR}/set-dync-dns.sh\" ]]; then\n        /bin/bash \"${SCRIPTS_DIR}/set-dync-dns.sh\"\n        if [[ -x \"${SCRIPTS_DIR}/update-ddns-a.sh\" ]]; then\n            /bin/bash \"${SCRIPTS_DIR}/update-ddns-a.sh\" || true\n        fi\n    fi\n}\n\nrun_set_dync_dns\n\nensure_cron_entry() {\n    local entry=\"$1\"\n    local marker=\"$2\"\n    local current\n    current=$(crontab -l 2>/dev/null || true)\n    if printf '%s' \"$current\" | grep -Fq \"$marker\"; then\n        return\n    fi\n    if [[ -n \"$current\" ]]; then\n        printf '%s\\n%s\\n' \"$current\" \"$entry\" | crontab -\n    else\n        printf '%s\\n' \"$entry\" | crontab -\n    fi\n}\n\nif [[ \"${DYNAMIC_IP_ENABLED}\" == \"true\" ]]; then\n    ensure_cron_entry \"@reboot /bin/bash ${SCRIPTS_DIR}/update-ddns-a.sh >> /var/log/update-ddns-a.log 2>&1\" \"update-ddns-a.sh\"\nfi\nensure_cron_entry \"@reboot /bin/bash ${SCRIPTS_DIR}/update-apikey.sh >> /var/log/update-apikey.log 2>&1\" \"update-apikey.sh\"\n\nif [[ -x \"${SCRIPTS_DIR}/update-apikey.sh\" ]]; then\n    /bin/bash \"${SCRIPTS_DIR}/update-apikey.sh\" || true\nelse\n    echo \"[openclaw] update-apikey.sh not found in ${SCRIPTS_DIR}\" >&2\nfi\n\necho \"[openclaw] set-openclaw.sh completed\"\n",
+            "configScriptTail": ""
           },
           "resources": {
             "nsg": {
@@ -283,10 +358,8 @@
                 "tier": "Regional"
               },
               "properties": {
-                "publicIPAllocationMethod": "Static",
-                "dnsSettings": {
-                  "domainNameLabel": "[toLower(replace(parameters('vmName'), '_', '-'))]"
-                }
+                "publicIPAllocationMethod": "[if(parameters('dynaIP'), 'Dynamic', 'Static')]",
+                "dnsSettings": "[if(not(parameters('dynaIP')), createObject('domainNameLabel', toLower(replace(parameters('vmName'), '_', '-'))), null())]"
               }
             },
             "nic": {
@@ -416,6 +489,9 @@
                 "hardwareProfile": {
                   "vmSize": "[parameters('vmSize')]"
                 },
+                "priority": "[if(parameters('spotVM'), 'Spot', 'Regular')]",
+                "evictionPolicy": "[if(parameters('spotVM'), 'Deallocate', null())]",
+                "billingProfile": "[if(parameters('spotVM'), createObject('maxPrice', parameters('spotMaxPrice')), null())]",
                 "storageProfile": {
                   "imageReference": {
                     "publisher": "Canonical",
@@ -435,17 +511,10 @@
                 "osProfile": {
                   "computerName": "[parameters('vmName')]",
                   "adminUsername": "[parameters('adminUsername')]",
+                  "adminPassword": "[parameters('adminPassword')]",
                   "customData": "[base64(variables('cloudInitContent'))]",
                   "linuxConfiguration": {
-                    "disablePasswordAuthentication": true,
-                    "ssh": {
-                      "publicKeys": [
-                        {
-                          "path": "[format('/home/{0}/.ssh/authorized_keys', parameters('adminUsername'))]",
-                          "keyData": "[parameters('adminSshPublicKey')]"
-                        }
-                      ]
-                    }
+                    "disablePasswordAuthentication": false
                   }
                 },
                 "networkProfile": {
@@ -463,7 +532,7 @@
             "vmCustomScript": {
               "type": "Microsoft.Compute/virtualMachines/extensions",
               "apiVersion": "2024-03-01",
-              "name": "[format('{0}/{1}', parameters('vmName'), 'configure-openclaw')]",
+              "name": "[format('{0}/{1}', parameters('vmName'), 'set-openclaw')]",
               "location": "[parameters('location')]",
               "properties": {
                 "publisher": "Microsoft.Azure.Extensions",
@@ -471,7 +540,7 @@
                 "typeHandlerVersion": "2.1",
                 "autoUpgradeMinorVersion": true,
                 "protectedSettings": {
-                  "script": "[base64(format('{0}{1}', format('#!/bin/bash\nset -euo pipefail\n\nexport AZURE_OPENAI_ENDPOINT=''{0}''\nexport AZURE_OPENAI_APIKEY=''{1}''\n\n', variables('openaiEndpoint'), listKeys('openAI', '2023-05-01').key1), variables('configScriptBody')))]"
+                  "script": "[base64(format('{0}{1}{2}', format('#!/bin/bash\nset -euo pipefail\n\nexport AZURE_OPENAI_ENDPOINT=''{0}''\nexport AZURE_OPENAI_APIKEY=''{1}''\nexport AZURE_OPENAI_ACCOUNT_NAME=''{2}''\nexport AZURE_RESOURCE_GROUP_NAME=''{3}''\nexport AZURE_REGION=''{4}''\nexport AZURE_MODEL_NAME=''{5}''\nexport AZURE_OPENAI_MODEL=''{6}''\nexport AZURE_MODEL_DEPLOYMENT_NAME=''{7}''\nexport AZURE_OPENAI_RESOURCE_GROUP=''{8}''\nexport AZURE_OPENCLAW_PORT=''{9}''\nexport AZURE_INFRA_DIR=''{10}''\nexport AZURE_RESOURCE_JSON_PATH=''{11}/resource.json''\nexport AZURE_DNS_JSON_PATH=''{12}/dns.json''\nexport AZURE_DYNAMIC_IP=''{13}''\nexport AZURE_ADMIN_USERNAME=''{14}''\nexport AZURE_SCRIPTS_REPO_URL=''{15}''\nexport AZURE_SCRIPTS_REPO_REF=''{16}''\n\n', variables('openaiEndpoint'), listKeys('openAI', '2023-05-01').key1, variables('openAIName'), variables('resourceGroupName'), parameters('location'), parameters('modelName'), parameters('modelName'), parameters('modelDeploymentName'), variables('resourceGroupName'), parameters('openclawPort'), variables('infraDir'), variables('infraDir'), variables('infraDir'), parameters('dynaIP'), parameters('adminUsername'), parameters('scriptsRepoUrl'), parameters('scriptsRepoRef')), variables('configScriptBody'), variables('configScriptTail')))]"
                 }
               },
               "dependsOn": [
@@ -485,6 +554,14 @@
               "type": "string",
               "value": "[reference('publicIp').ipAddress]"
             },
+            "openclawPort": {
+              "type": "int",
+              "value": "[parameters('openclawPort')]"
+            },
+            "modelName": {
+              "type": "string",
+              "value": "[parameters('modelName')]"
+            },
             "openaiEndpoint": {
               "type": "string",
               "value": "[variables('openaiEndpoint')]"
@@ -495,16 +572,21 @@
             }
           }
         }
-      },
-      "dependsOn": [
-        "rg"
-      ]
+      }
     }
   },
   "outputs": {
     "AZURE_OPENCLAW_PUBLICIP": {
       "type": "string",
       "value": "[reference('resources').outputs.publicIpAddress.value]"
+    },
+    "AZURE_OPENCLAW_PORT": {
+      "type": "int",
+      "value": "[reference('resources').outputs.openclawPort.value]"
+    },
+    "AZURE_OPENAI_MODEL": {
+      "type": "string",
+      "value": "[reference('resources').outputs.modelName.value]"
     },
     "AZURE_OPENAI_ENDPOINT": {
       "type": "string",

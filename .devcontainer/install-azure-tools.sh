@@ -9,5 +9,7 @@ curl -fsSL https://aka.ms/install-azd.sh | sudo bash || echo "azd install failed
 
 echo ">>> Installing Bicep CLI..."
 az bicep install || echo "bicep install failed"
+echo 'export PATH="$HOME/.azure/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
 
 echo ">>> Azure tools installation finished."
