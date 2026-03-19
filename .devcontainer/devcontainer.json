@@ -8,9 +8,10 @@
       "extensions": [
         "ms-azuretools.vscode-azurecli",
         "ms-azuretools.azure-dev",
-        "ms-vscode.azure-account"
+        "ms-vscode.azure-account",
+        "GitHub.copilot-chat"
       ]
     }
   },
-  "postCreateCommand": "install-azure-tools.sh &"
+  "postCreateCommand": "sudo /usr/local/bin/install-azure-tools.sh &"
 }
