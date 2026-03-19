@@ -1,10 +1,11 @@
-# azure-opencalw
+# azure-openclaw
 Deploy OpenClaw on an Azure VM with an AI Foundry backend and keep your runtime helpers versioned in the same repo.
 
-[![Deploy with azd](https://aka.ms/deploytoazurebutton)](https://aka.ms/azd-deploy)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FHaoHoo%2Fazure-openclaw%2Fmain%2Finfra%2Fmain.bicep?repository=https%3A%2F%2Fgithub.com%2FHaoHoo%2Fazure-openclaw&path=infra&branch=main)
 
 ## Overview (English)
-- **Infrastructure-first** – Two Bicep modules wire up networking, a Linux VM, Azure OpenAI, and AI Foundry. `infra/main.bicep` exposes all the knobs (`modelName`, `openclawPort`, `dynaIP`, `scriptsRepoUrl`, etc.) and forwards them into the resource module, while `infra/resources.bicep` injects the cloud-init bootstrap and the Custom Script Extension payload.
+- **Infrastructure-first** – Two Bicep modules wire up networking, a Linux VM, Azure OpenAI, and AI Foundry. `infra/main.bicep` exposes the knobs (`modelName`, `openclawPort`, `dynaIP`, `scriptsRepoUrl`, etc.) and forwards them into the resource module, while `infra/resources.bicep` injects the cloud-init bootstrap and the Custom Script Extension payload.
+- **azd 自动部署标准布局** – 仓库根目录保留 `azure.yaml`（引用 `infra/main.bicep`）、`infra/`、`scripts/` 以及 helper，azd/快速部署按钮可以自动检测模板，并从 `scripts/set-openclaw.sh` 启动安装逻辑。
 - **Setup script workflow** – The Custom Script Extension runs `scripts/set-openclaw.sh`, which clones this repository, copies the complete `scripts/` directory into the administrator home, records the environment metadata (including whether dynamic IP is enabled), installs OpenClaw, merges `openclaw.json`, and wires cron jobs for `update-apikey.sh` and `update-ddns-a.sh`.
 - **Dynamic DNS ready** – When dynamic public IP is enabled, `set-openclaw.sh` runs `set-dync-dns.sh`; the helper prompts you to pick a provider (currently Aliyun), saves your credentials/domain/record info to `scripts/update-dns/ddns.json`, and rewrites `update-ddns-a.sh` into an Aliyun-specific updater that reads that JSON and refreshes the A record using the Aliyun CLI.
 - **Secure metadata refresh** – `update-apikey.sh` sources the generated `.env`, hits Azure to refresh the OpenAI key, writes the latest metadata to `resource.json`, and rewrites `~/.openclaw/openclaw.json` so OpenClaw always uses the newest endpoint/key.

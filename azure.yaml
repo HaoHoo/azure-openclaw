@@ -2,3 +2,4 @@
 name: azure-openclaw
 metadata:
   template: azure-openclaw@0.0.1-beta
+template: ./infra/main.bicep
