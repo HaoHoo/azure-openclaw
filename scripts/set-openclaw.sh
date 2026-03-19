@@ -12,11 +12,13 @@
 
 set -euo pipefail
 
+AZURE_ADMIN_USERNAME=${AZURE_ADMIN_USERNAME:-${SUDO_USER:-${USER:-$(whoami)}}}
+
 if command -v cloud-init &>/dev/null; then
     cloud-init status --wait 2>/dev/null || true
 fi
 
-ADMIN_HOME="/home/${AZURE_ADMIN_USERNAME}"
+ADMIN_HOME="${HOME:-/home/${AZURE_ADMIN_USERNAME}}"
 SCRIPTS_DIR="${ADMIN_HOME}/scripts"
 TMP_SCRIPTS_REPO="/tmp/azure-openclaw-scripts"
 REPO_URL="${AZURE_SCRIPTS_REPO_URL:-https://github.com/HaoHoo/azure-opencalw.git}"
