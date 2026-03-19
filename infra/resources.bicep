@@ -8,18 +8,26 @@
 // ============================================================
 
 param location string
-param vmName string
+param openclawName string
+//param resourceGroupName string
+param vmName string = '${openclawName}-vm'
 param vmSize string
-param vnetName string
-param publicIpName string
-param foundryName string
+param vnetName string = '${openclawName}-vnet'
+param publicIpName string = '${openclawName}-publicip'
+param foundryName string = '${openclawName}-foundry'
 param modelName string
-param modelDeploymentName string
+param modelDeploymentName string = modelName
 param openclawPort int
 param adminUsername string
-
 @secure()
-param adminSshPublicKey string
+param adminPassword string
+param spotVM bool = false
+param spotMaxPrice int = -1
+param dynaIP bool = false
+@description('Git URL containing the helper scripts deployed to the VM.')
+param scriptsRepoUrl string = 'https://github.com/HaoHoo/azure-opencalw.git'
+@description('Git ref or branch used when cloning the helper scripts repo.')
+param scriptsRepoRef string = 'main'
 
 // ============================================================
 // Derived / local names
@@ -29,14 +37,20 @@ var nsgName            = '${vmName}-nsg'
 var subnetName         = 'default'
 var nicName            = '${vmName}-nic'
 
-// Storage account names: 3-24 chars, lowercase letters + numbers only
-var storageAccountName = take('st${uniqueString(resourceGroup().id)}', 24)
+// Names must follow openclawName + resource abbreviation, respecting service constraints.
+var compactName        = replace(toLower(openclawName), '-', '')
 
-// Key Vault names: 3-24 chars, alphanumeric + hyphens, must start with letter
-var keyVaultName       = take('kv${uniqueString(resourceGroup().id)}', 24)
+var infraDir          = '/home/${adminUsername}/infra'
+var resourceGroupName = resourceGroup().name
 
-// Azure OpenAI account name and custom subdomain (globally unique, ≤ 24 chars)
-var openAIName         = take('oai${uniqueString(resourceGroup().id, foundryName)}', 24)
+// Storage accounts (lowercase letters and digits only, 3-24 chars). Hyphens not allowed.
+var storageAccountName = take('${compactName}st${uniqueString(resourceGroup().id, 'st')}', 24)
+
+// Key Vault names allow hyphens and must begin with a letter.
+var keyVaultName       = take('${compactName}-kv${uniqueString(resourceGroup().id, 'kv')}', 24)
+
+// Azure OpenAI account names are globally unique (≤ 24 chars).
+var openAIName         = take('${compactName}oai${uniqueString(resourceGroup().id, 'oai')}', 24)
 
 // ============================================================
 // NETWORKING
@@ -110,10 +124,10 @@ resource publicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
     tier: 'Regional'
   }
   properties: {
-    publicIPAllocationMethod: 'Static'
-    dnsSettings: {
+    publicIPAllocationMethod: dynaIP ? 'Dynamic' : 'Static'
+    dnsSettings: !dynaIP ? {
       domainNameLabel: toLower(replace(vmName, '_', '-'))
-    }
+    } : null
   }
 }
 
@@ -245,15 +259,40 @@ var openaiApiKey   = openAI.listKeys().key1
 
 // The cloud-init YAML is base64-encoded and placed in customData.
 // On first boot, the cloud agent installs Node.js 22, Python 3, and Git.
-var cloudInitContent = loadTextContent('../scripts/cloud-init.yml')
+var cloudInitTemplate = '''
+#cloud-config
+# Pre-install Node.js 22, Python 3, Azure CLI, and Git on first boot.
+# This content is base64-encoded and passed via osProfile.customData.
+
+package_update: true
+package_upgrade: false
+
+packages:
+  - git
+  - python3
+  - python3-pip
+  - curl
+  - jq
+
+runcmd:
+  # Install Node.js 22 from the official NodeSource repository
+  - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  - apt-get install -y nodejs
+  - node --version
+  - npm --version
+  - curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+  - az version
+'''
+var cloudInitContent = replace(cloudInitTemplate, '__ADMIN_USERNAME__', adminUsername)
 
 // Build the Custom Script Extension payload:
 // A header that exports the OpenAI credentials is prepended to the
 // configure-openclaw.sh body so the script can read them as env vars.
 // NOTE: \'  is used to produce a literal single quote inside the shell export statement.
-var configScriptHeader = '#!/bin/bash\nset -euo pipefail\n\nexport AZURE_OPENAI_ENDPOINT=\'${openaiEndpoint}\'\nexport AZURE_OPENAI_APIKEY=\'${openaiApiKey}\'\n\n'
-var configScriptBody   = loadTextContent('../scripts/configure-openclaw.sh')
-var configScriptFull   = '${configScriptHeader}${configScriptBody}'
+var configScriptHeader = '#!/bin/bash\nset -euo pipefail\n\nexport AZURE_OPENAI_ENDPOINT=\'${openaiEndpoint}\'\nexport AZURE_OPENAI_APIKEY=\'${openaiApiKey}\'\nexport AZURE_OPENAI_ACCOUNT_NAME=\'${openAIName}\'\nexport AZURE_RESOURCE_GROUP_NAME=\'${resourceGroupName}\'\nexport AZURE_REGION=\'${location}\'\nexport AZURE_MODEL_NAME=\'${modelName}\'\nexport AZURE_OPENAI_MODEL=\'${modelName}\'\nexport AZURE_MODEL_DEPLOYMENT_NAME=\'${modelDeploymentName}\'\nexport AZURE_OPENAI_RESOURCE_GROUP=\'${resourceGroupName}\'\nexport AZURE_OPENCLAW_PORT=\'${openclawPort}\'\nexport AZURE_INFRA_DIR=\'${infraDir}\'\nexport AZURE_RESOURCE_JSON_PATH=\'${infraDir}/resource.json\'\nexport AZURE_DNS_JSON_PATH=\'${infraDir}/dns.json\'\nexport AZURE_DYNAMIC_IP=\'${dynaIP}\'\nexport AZURE_ADMIN_USERNAME=\'${adminUsername}\'\nexport AZURE_SCRIPTS_REPO_URL=\'${scriptsRepoUrl}\'\nexport AZURE_SCRIPTS_REPO_REF=\'${scriptsRepoRef}\'\n\n'
+var configScriptBody        = loadTextContent('../scripts/set-openclaw.sh')
+var configScriptTail   = ''
+var configScriptFull   = '${configScriptHeader}${configScriptBody}${configScriptTail}'
 
 resource vm 'Microsoft.Compute/virtualMachines@2024-03-01' = {
   name: vmName
@@ -262,6 +301,11 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-03-01' = {
     hardwareProfile: {
       vmSize: vmSize
     }
+    priority: spotVM ? 'Spot' : 'Regular'
+    evictionPolicy: spotVM ? 'Deallocate' : null
+    billingProfile: spotVM ? {
+      maxPrice: spotMaxPrice
+    } : null
     storageProfile: {
       imageReference: {
         publisher: 'Canonical'
@@ -281,18 +325,11 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-03-01' = {
     osProfile: {
       computerName: vmName
       adminUsername: adminUsername
+      adminPassword: adminPassword
       // Injects cloud-init instructions to pre-install Node.js 22, Python, Git
       customData: base64(cloudInitContent)
       linuxConfiguration: {
-        disablePasswordAuthentication: true
-        ssh: {
-          publicKeys: [
-            {
-              path: '/home/${adminUsername}/.ssh/authorized_keys'
-              keyData: adminSshPublicKey
-            }
-          ]
-        }
+        disablePasswordAuthentication: false
       }
     }
     networkProfile: {
@@ -314,7 +351,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-03-01' = {
 
 resource vmCustomScript 'Microsoft.Compute/virtualMachines/extensions@2024-03-01' = {
   parent: vm
-  name: 'configure-openclaw'
+  name: 'set-openclaw'
   location: location
   properties: {
     publisher: 'Microsoft.Azure.Extensions'
@@ -322,7 +359,7 @@ resource vmCustomScript 'Microsoft.Compute/virtualMachines/extensions@2024-03-01
     typeHandlerVersion: '2.1'
     autoUpgradeMinorVersion: true
     protectedSettings: {
-      // base64-encoded full script (header with injected values + configure-openclaw.sh body)
+      // base64-encoded full script (header with injected values + set-openclaw.sh body)
       script: base64(configScriptFull)
     }
   }
@@ -333,7 +370,8 @@ resource vmCustomScript 'Microsoft.Compute/virtualMachines/extensions@2024-03-01
 // ============================================================
 
 output publicIpAddress string = publicIp.properties.ipAddress
+output openclawPort int = openclawPort
+output modelName string = modelName
 output openaiEndpoint  string = openaiEndpoint
-
 @secure()
 output openaiApiKey    string = openaiApiKey
