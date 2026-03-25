@@ -27,19 +27,16 @@
       "value": "azure-openclaw-foundry"
     },
     "modelName": {
-      "value": "gpt-5.2-chat"
+      "value": "gpt-4o"
     },
     "modelDeploymentName": {
-      "value": "gpt-5.2-chat"
+      "value": "gpt-4o"
     },
     "openclawPort": {
       "value": 18789
     },
     "adminUsername": {
       "value": "azureuser"
-    },
-    "adminSshPublicKey": {
-      "value": ""
     }
   }
 }

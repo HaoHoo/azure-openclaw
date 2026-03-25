@@ -3,8 +3,8 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source /etc/environment >/dev/null 2>&1 || true
-
-ddns_file="${AZURE_DNS_JSON_PATH:-${script_dir}/ddns.json}"
+infra_dir="${AZURE_INFRA_DIR:-${script_dir}/../infra}"
+ddns_file="${AZURE_DNS_JSON_PATH:-${infra_dir}/ddns.json}"
 
 mkdir -p "${infra_dir}"
 
@@ -16,6 +16,47 @@ install_aliyun() {
     echo "[dns] Installing Alibaba Cloud CLI..."
     curl -fsSL https://aliyuncli.alicdn.com/install.sh | bash
     export PATH="${HOME}/.aliyun/bin:${PATH}"
+}
+
+configure_aliyun_cli() {
+    local profile="${1:-default}"
+    if printf '%s\n' "${access_key_id}" "${access_key_secret}" "${region_id:-cn-hangzhou}" json | aliyun configure >/dev/null 2>&1; then
+        echo "[dns] aliyun (profile: ${profile}, region: ${region_id:-cn-hangzhou}) configured."
+        return
+    fi
+
+    aliyun configure set --profile "${profile}" \
+        --access-key-id "${access_key_id}" \
+        --access-key-secret "${access_key_secret}" \
+        --region-id "${region_id:-cn-hangzhou}" \
+        --output json >/dev/null
+    echo "[dns] aliyun configure set applied: ${profile} (${region_id:-cn-hangzhou})"
+}
+
+fetch_record_id() {
+    local domain="$1"
+    local rr="$2"
+    local region="$3"
+
+    aliyun alidns DescribeDomainRecords \
+        --RegionId "${region:-cn-hangzhou}" \
+        --DomainName "${domain}" \
+        --RRKeyWord "${rr}" \
+        --Type A \
+        --PageSize 20 \
+        --Output json | \
+        TARGET_RR="${rr}" python3 - <<'PY'
+import json
+import os
+import sys
+
+records = json.load(sys.stdin).get('DomainRecords', {}).get('Record', [])
+target_rr = os.environ.get('TARGET_RR', '')
+for record in records:
+    if record.get('RR') == target_rr and record.get('Type') == 'A':
+        print(record.get('RecordId', ''))
+        break
+PY
 }
 
 prompt_value() {
@@ -55,81 +96,86 @@ saved_access_secret="$(read_saved 'accessKeySecret')"
 saved_region="$(read_saved 'regionId')"
 saved_domain="$(read_saved 'domain')"
 saved_subdomain="$(read_saved 'subdomain')"
-saved_record="$(read_saved 'recordId')"
 
 access_key_id="$(prompt_value 'Aliyun AccessKey ID' "${saved_access_id}" '')"
 access_key_secret="$(prompt_value 'Aliyun AccessKey Secret' "${saved_access_secret}" '')"
-region_id="$(prompt_value 'Region ID' "${saved_region}" 'cn-hangzhou')"
-domain="$(prompt_value '域名' "${saved_domain}" 'example.com')"
-subdomain="$(prompt_value '子域名（RR）' "${saved_subdomain}" 'www')"
-record_id="$(prompt_value 'Record ID (留空自动查询)' "${saved_record}" '')"
+region_id="$(prompt_value 'Region ID' "${saved_region}" 'default: cn-hangzhou')"
+# Domain & Subdomain use aliyun DNS, not Azure DNS
+domain="$(prompt_value 'Domain Name' "${saved_domain}" 'example: example.com')"
+subdomain="$(prompt_value 'Sub-Domain (RR)' "${saved_subdomain}" 'example: www')"
 
+configure_aliyun_cli
+record_id="$(fetch_record_id "${domain}" "${subdomain}" "${region_id}")"
 if [[ -z "${record_id}" ]]; then
-    echo "[dns] 尝试自动查询 ${subdomain}.${domain} 的记录"
-    record_id=$(aliyun alidns DescribeDomainRecords \
-        --RegionId "${region_id}" \
-        --DomainName "${domain}" \
-        --RR "${subdomain}" \
-        --Type A \
-        --AccessKeyId "${access_key_id}" \
-        --AccessKeySecret "${access_key_secret}" \
-        --PageSize 10 \
-        --Output text \
-        --Query "DomainRecords.Record[?RR=='${subdomain}' && Type=='A'].RecordId" | head -n1)
-fi
-
-if [[ -z "${record_id}" ]]; then
-    echo "[dns] 无法定位 ${subdomain}.${domain} 的 RecordId，请手动登录阿里云控制台确认" >&2
+    echo "[dns] Can not query ${subdomain}.${domain} for A record's RecordId, please ensure the domain/subdomain exists" >&2
     exit 1
 fi
 
+ip_source="${AZURE_PUBLIC_IP_ENDPOINT:-https://ipv4.icanhazip.com}"
+if [[ -n "${AZURE_PUBLIC_IP_ENDPOINT:-}" ]]; then
+    echo "[dns] Public IP is obtained via ${AZURE_PUBLIC_IP_ENDPOINT}" >&2
+fi
+current_ip="$(curl -fsS "${ip_source}" | tr -d '[:space:]')"
+if [[ -z "${current_ip}" ]]; then
+    echo "[dns] Unable to obtain the current IPv4 address" >&2
+    exit 1
+fi
+
+echo "[dns] Preparing to update ${subdomain}.${domain} (RecordId=${record_id}) to ${current_ip}"
+if ! aliyun alidns UpdateDomainRecord \
+    --RegionId "${region_id:-cn-hangzhou}" \
+    --RecordId "${record_id}" \
+    --RR "${subdomain}" \
+    --Type A \
+    --Value "${current_ip}" >/tmp/update-ddns.log 2>&1; then
+    echo "[dns] Update failed, see /tmp/update-ddns.log for details" >&2
+    cat /tmp/update-ddns.log >&2
+    rm -f /tmp/update-ddns.log
+    exit 1
+fi
+rm -f /tmp/update-ddns.log
+
 cat <<EOF > "${ddns_file}"
 {
-  "provider": "aliyun",
-  "dynamicIpEnabled": true,
-  "aliyun": {
-    "accessKeyId": "${access_key_id}",
-    "accessKeySecret": "${access_key_secret}",
-    "regionId": "${region_id}",
-    "domain": "${domain}",
-    "subdomain": "${subdomain}",
-    "recordId": "${record_id}"
-  },
-  "lastConfigured": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    "dynamicIpEnabled": true,
+    "currentIp": "${current_ip}",
+    "aliyun": {
+        "accessKeyId": "${access_key_id}",
+        "accessKeySecret": "${access_key_secret}",
+        "regionId": "${region_id}",
+        "domain": "${domain}",
+        "subdomain": "${subdomain}",
+        "recordId": "${record_id}"
+    },
+  "lastConfigured": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "lastUpdated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 EOF
 
-echo "[dns] Aliyun DDNS 配置已保存到 ${ddns_file}"
-
-if [[ -x "${script_dir}/../update-ddns-a.sh" ]]; then
-    chmod +x "${script_dir}/../update-ddns-a.sh"
-fi
+echo "[dns] Aliyun DDNS configuration has been saved to ${ddns_file}"
 
 update_script_path="${script_dir}/../update-ddns-a.sh"
 cat <<'EOF' > "${update_script_path}"
 #!/bin/bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ADMIN_HOME="$(dirname "${SCRIPT_DIR}")"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source /etc/environment >/dev/null 2>&1 || true
 
-infra_dir="${AZURE_INFRA_DIR:-${ADMIN_HOME}/infra}"
+infra_dir="${AZURE_INFRA_DIR:-${script_dir}/../infra}"
 ddns_file="${AZURE_DNS_JSON_PATH:-${infra_dir}/ddns.json}"
 
 if [[ ! -f "${ddns_file}" ]]; then
-    echo "[ddns] ${ddns_file} 缺失，请先运行 set-dync-dns.sh 配置"
+    echo "[ddns] ${ddns_file} missing, please rerun set-dns-ali.sh" >&2
     exit 0
 fi
 
-mapfile -t ddns_values < <(python3 - <<'PY'
-import json
-import pathlib
+mapfile -t ddns_values < <(python3 - <<PY
+import json, pathlib
 
 path = pathlib.Path("${ddns_file}")
 data = json.loads(path.read_text())
 aliyun = data.get('aliyun', {})
-print(data.get('provider', ''))
 print(aliyun.get('accessKeyId', ''))
 print(aliyun.get('accessKeySecret', ''))
 print(aliyun.get('regionId', ''))
@@ -139,41 +185,33 @@ print(aliyun.get('recordId', ''))
 PY
 )
 
-if [[ ${#ddns_values[@]} -lt 7 ]]; then
-    echo "[ddns] ${ddns_file} 内容不完整" >&2
+if [[ ${#ddns_values[@]} -lt 6 ]]; then
+    echo "[ddns] ${ddns_file} content incomplete" >&2
     exit 1
 fi
 
-provider="${ddns_values[0]:-}"
-access_key_id="${ddns_values[1]:-}"
-access_key_secret="${ddns_values[2]:-}"
-region_id="${ddns_values[3]:-}"
-domain="${ddns_values[4]:-}"
-subdomain="${ddns_values[5]:-}"
-record_id="${ddns_values[6]:-}"
-
-if [[ "${provider}" != "aliyun" ]]; then
-    echo "[ddns] 目前仅支持 aliyun；配置为 ${provider:-'未知'}" >&2
-    exit 1
-fi
-
-for var in access_key_id access_key_secret region_id domain subdomain record_id; do
-    if [[ -z "${!var}" ]]; then
-        echo "[ddns] ${var} 缺失，无法更新" >&2
-        exit 1
-    fi
-done
+access_key_id="${ddns_values[0]:-}"
+access_key_secret="${ddns_values[1]:-}"
+region_id="${ddns_values[2]:-}"
+domain="${ddns_values[3]:-}"
+subdomain="${ddns_values[4]:-}"
+record_id="${ddns_values[5]:-}"
 
 if ! command -v aliyun &>/dev/null; then
-    echo "[ddns] aliyun CLI 缺失，请先运行 set-dns-ali.sh 重新配置" >&2
+    echo "[ddns] aliyun CLI is missing, please rerun set-dns-ali.sh" >&2
     exit 1
 fi
 
 export PATH="${HOME}/.aliyun/bin:${PATH}"
 
-current_ip=$(curl -fsS https://ipv4.icanhazip.com | tr -d '[:space:]')
+public_ip_source="${AZURE_PUBLIC_IP_ENDPOINT:-https://ipv4.icanhazip.com}"
+if [[ -n "${AZURE_PUBLIC_IP_ENDPOINT:-}" ]]; then
+    echo "[ddns] Public IP is obtained via ${AZURE_PUBLIC_IP_ENDPOINT}" >&2
+fi
+
+current_ip=$(curl -fsS "${public_ip_source}" | tr -d '[:space:]')
 if [[ -z "${current_ip}" ]]; then
-    echo "[ddns] 无法获取当前 IPv4 地址" >&2
+    echo "[ddns] Unable to obtain the current IPv4 address" >&2
     exit 1
 fi
 
@@ -185,16 +223,14 @@ if ! aliyun alidns UpdateDomainRecord \
     --RR "${subdomain}" \
     --Type A \
     --Value "${current_ip}" >/tmp/update-ddns.log 2>&1; then
-    echo "[ddns] 更新失败，查看 /tmp/update-ddns.log" >&2
+    echo "[ddns] Update failed, see /tmp/update-ddns.log for details" >&2
     cat /tmp/update-ddns.log >&2
     rm -f /tmp/update-ddns.log
     exit 1
 fi
 
 python3 - <<PY
-import datetime
-import json
-import pathlib
+import datetime, json, pathlib
 
 path = pathlib.Path("${ddns_file}")
 data = json.loads(path.read_text())
@@ -205,7 +241,7 @@ PY
 
 rm -f /tmp/update-ddns.log
 
-echo "[ddns] ${subdomain}.${domain} 更新为 ${current_ip}"
+echo "[ddns] ${subdomain}.${domain} has been updated to ${current_ip}"
 EOF
 
 chmod +x "${update_script_path}"

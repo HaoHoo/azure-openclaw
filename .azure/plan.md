@@ -25,3 +25,21 @@
 - If the repo structure needs additional files for azd discovery, call that out before changing anything else.
 
 **Next Step**: This plan has been executed and is ready for validation (e.g., run azure-validate when preparing to deploy). Let me know if you would like me to initiate validation or adjust anything further.
+
+## Additional Objective
+- Assess the environment variables referenced in `.azure/openclaw.json`, ensure every placeholder is populated by the deployment pipeline, and align `set-openclaw.sh`/Bicep so the generated `openclaw.json` matches the JSON schema (identity, commands, gateway, auth, and allowed origins).
+
+## Tasks
+| # | Activity | Outcome | Status |
+|---|----------|---------|--------|
+| 1 | List every `${...}` placeholder inside `.azure/openclaw.json` and trace whether Bicep exports or helper scripts already provide those env vars (including `azurePassword` and `AZURE_PUBLIC_IP`). | Confirm which env vars are already covered and which need new exports/injections. | not started |
+| 2 | Update `scripts/set-openclaw.sh` so it writes the full JSON structure expected by `.azure/openclaw.json`, including `identity`, `commands`, `gateway` with `allowedOrigins`, and `auth`, drawing from the available env vars and adding `azurePassword` if necessary. | `openclaw.json` content matches the schema in the repo root, with necessary values populated from environment variables. | not started |
+| 3 | Adjust `infra/resources.bicep`/`main.bicep` so the Custom Script Extension exports any missing env vars (e.g., the VM public IP and the password for the OpenClaw UI) before running `set-openclaw.sh`. | Scripts receive `AZURE_PUBLIC_IP` and `azurePassword` so the generated config can render correctly. | not started |
+
+## Validation Criteria
+- All placeholders in `.azure/openclaw.json` have corresponding env vars exported by the deployed infrastructure or helper scripts.
+- The JSON written by `set-openclaw.sh` matches the schema, especially identity, commands, gateway/allowed origins, and auth sections.
+- Bicep exports now include the information needed for those env vars (public IP and OpenClaw password).
+
+## Next Step
+Present this plan to the user and confirm before beginning implementation.

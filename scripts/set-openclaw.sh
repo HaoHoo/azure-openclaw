@@ -12,11 +12,13 @@
 
 set -euo pipefail
 
+AZURE_ADMIN_USERNAME=${AZURE_ADMIN_USERNAME:-${SUDO_USER:-${USER:-$(whoami)}}}
+
 if command -v cloud-init &>/dev/null; then
     cloud-init status --wait 2>/dev/null || true
 fi
 
-ADMIN_HOME="/home/${AZURE_ADMIN_USERNAME}"
+ADMIN_HOME="${HOME:-/home/${AZURE_ADMIN_USERNAME}}"
 SCRIPTS_DIR="${ADMIN_HOME}/scripts"
 TMP_SCRIPTS_REPO="/tmp/azure-openclaw-scripts"
 REPO_URL="${AZURE_SCRIPTS_REPO_URL:-https://github.com/HaoHoo/azure-opencalw.git}"
@@ -101,8 +103,13 @@ else
     echo "[openclaw] OpenClaw already installed, skipping install step."
 fi
 
+if command -v openclaw &>/dev/null; then
+    echo "[openclaw] Ensuring OpenClaw gateway is installed."
+    openclaw gateway install || true
+fi
+
 OPENCLAW_CONFIG_DIR="${ADMIN_HOME}/.openclaw"
-OPENCLAW_ENV_FILE="${OPENCLAW_CONFIG_DIR}/.env"
+OPENCLAW_ENV_FILE="${OPENCLAW_CONFIG_DIR}/.azure.env"
 OPENCLAW_CONFIG="${OPENCLAW_CONFIG_DIR}/openclaw.json"
 BASE_URL="${AZURE_OPENAI_ENDPOINT%/}/openai/v1"
 WORKSPACE_DIR="${OPENCLAW_CONFIG_DIR}/workspace"
@@ -137,8 +144,8 @@ try:
 except (FileNotFoundError, json.JSONDecodeError):
     data = {}
 
-data.setdefault('meta', {})
-data['meta'].update({'name': 'Azure-OpenClaw', 'version': '1.0.0'})
+# data.setdefault('meta', {})
+# data['meta'].update({'name': 'Azure-OpenClaw', 'version': '1.0.0'})
 
 models = data.setdefault('models', {})
 models['mode'] = 'merge'
@@ -169,15 +176,26 @@ agents = data.setdefault('agents', {})
 defaults = agents.setdefault('defaults', {})
 defaults.update({
     'model': f"azure-openai/{model_id}",
-    'workspace': os.environ['WORKSPACE_DIR']
+    'workspace': os.environ['WORKSPACE_DIR'],
+    'compaction': {
+        'mode': 'safeguard'
+    }
 })
 
 gateway = data.setdefault('gateway', {})
 gateway.update({
     'port': int(os.environ['AZURE_OPENCLAW_PORT']),
-    'host': '0.0.0.0',
     'mode': 'local',
-    'trustProxy': True
+    'bind': 'lan',
+    'controlUi': {
+        'enabled': True,
+        'basePath': '/openclaw',
+            'allowedOrigins': [
+            'http://localhost:${AZURE_OPENCLAW_PORT}',
+            'http://127.0.0.1:${AZURE_OPENCLAW_PORT}',
+            'http://${AZURE_OPENCLAW_PUBLICIP}:${AZURE_OPENCLAW_PORT}'
+            ]
+       }
 })
 
 config_path.write_text(json.dumps(data, indent=2))
@@ -185,6 +203,8 @@ print(f"[openclaw] Configuration persisted to {config_path} and {os.environ['OPE
 PYEOF
 
 echo "[openclaw] Configuration complete."
+
+
 
 run_set_dync_dns() {
     if [[ "${DYNAMIC_IP_ENABLED}" == "true" ]] && [[ -x "${SCRIPTS_DIR}/set-dync-dns.sh" ]]; then

@@ -289,7 +289,29 @@ var cloudInitContent = replace(cloudInitTemplate, '__ADMIN_USERNAME__', adminUse
 // A header that exports the OpenAI credentials is prepended to the
 // configure-openclaw.sh body so the script can read them as env vars.
 // NOTE: \'  is used to produce a literal single quote inside the shell export statement.
-var configScriptHeader = '#!/bin/bash\nset -euo pipefail\n\nexport AZURE_OPENAI_ENDPOINT=\'${openaiEndpoint}\'\nexport AZURE_OPENAI_APIKEY=\'${openaiApiKey}\'\nexport AZURE_OPENAI_ACCOUNT_NAME=\'${openAIName}\'\nexport AZURE_RESOURCE_GROUP_NAME=\'${resourceGroupName}\'\nexport AZURE_REGION=\'${location}\'\nexport AZURE_MODEL_NAME=\'${modelName}\'\nexport AZURE_OPENAI_MODEL=\'${modelName}\'\nexport AZURE_MODEL_DEPLOYMENT_NAME=\'${modelDeploymentName}\'\nexport AZURE_OPENAI_RESOURCE_GROUP=\'${resourceGroupName}\'\nexport AZURE_OPENCLAW_PORT=\'${openclawPort}\'\nexport AZURE_INFRA_DIR=\'${infraDir}\'\nexport AZURE_RESOURCE_JSON_PATH=\'${infraDir}/resource.json\'\nexport AZURE_DNS_JSON_PATH=\'${infraDir}/dns.json\'\nexport AZURE_DYNAMIC_IP=\'${dynaIP}\'\nexport AZURE_ADMIN_USERNAME=\'${adminUsername}\'\nexport AZURE_SCRIPTS_REPO_URL=\'${scriptsRepoUrl}\'\nexport AZURE_SCRIPTS_REPO_REF=\'${scriptsRepoRef}\'\n\n'
+var configScriptHeader = '''#!/bin/bash
+set -euo pipefail
+
+export HOME='/home/${adminUsername}'
+export AZURE_OPENAI_ENDPOINT='${openaiEndpoint}'
+export AZURE_OPENAI_APIKEY='${openaiApiKey}'
+export AZURE_OPENAI_ACCOUNT_NAME='${openAIName}'
+export AZURE_RESOURCE_GROUP_NAME='${resourceGroupName}'
+export AZURE_REGION='${location}'
+export AZURE_MODEL_NAME='${modelName}'
+export AZURE_OPENAI_MODEL='${modelName}'
+export AZURE_MODEL_DEPLOYMENT_NAME='${modelDeploymentName}'
+export AZURE_OPENAI_RESOURCE_GROUP='${resourceGroupName}'
+export AZURE_OPENCLAW_PORT='${openclawPort}'
+export AZURE_INFRA_DIR='${infraDir}'
+export AZURE_RESOURCE_JSON_PATH='${infraDir}/resource.json'
+export AZURE_DNS_JSON_PATH='${infraDir}/dns.json'
+export AZURE_DYNAMIC_IP='${dynaIP}'
+export AZURE_ADMIN_USERNAME='${adminUsername}'
+export AZURE_SCRIPTS_REPO_URL='${scriptsRepoUrl}'
+export AZURE_SCRIPTS_REPO_REF='${scriptsRepoRef}'
+
+'''
 var configScriptBody        = loadTextContent('../scripts/set-openclaw.sh')
 var configScriptTail   = ''
 var configScriptFull   = '${configScriptHeader}${configScriptBody}${configScriptTail}'

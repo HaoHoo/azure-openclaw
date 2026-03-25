@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ADMIN_HOME="$(dirname "${SCRIPT_DIR}")"
 OPENCLAW_CONFIG_DIR="${ADMIN_HOME}/.openclaw"
-ENV_FILE="${OPENCLAW_CONFIG_DIR}/.env"
+ENV_FILE="${OPENCLAW_CONFIG_DIR}/.azure.env"
 CONFIG_FILE="${OPENCLAW_CONFIG_DIR}/openclaw.json"
 
 if [[ ! -f "${ENV_FILE}" ]]; then
