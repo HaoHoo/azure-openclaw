@@ -2,7 +2,7 @@
 Deploy OpenClaw on an Azure VM with an AI Foundry backend and keep your runtime helpers versioned in the same repo.
 
 [![Open in Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?repo=HaoHoo/azure-openclaw)
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FHaoHoo%2Fazure-openclaw%2Fmain%2Finfra%2Fmain.bicep?repository=https%3A%2F%2Fgithub.com%2FHaoHoo%2Fazure-openclaw&path=infra&branch=main)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FHaoHoo%2Fazure-openclaw%2Fmain%2Finfra%2Fmain.bicep?repository=https%3A%2F%2Fgithub.com%2FHaoHoo%2Fazure-openclaw&path=infra&branch=copilot/hao.hu@vscode)
 
 ## Overview (English)
 - **Infrastructure-first** – Two Bicep modules wire up networking, a Linux VM, Azure OpenAI, and AI Foundry. `infra/main.bicep` exposes the knobs (`modelName`, `openclawPort`, `dynaIP`, `scriptsRepoUrl`, etc.) and forwards them into the resource module, while `infra/resources.bicep` injects the cloud-init bootstrap and the Custom Script Extension payload.
