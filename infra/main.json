@@ -65,7 +65,7 @@
     },
     "modelName": {
       "type": "string",
-      "defaultValue": "gpt-5.2-chat",
+      "defaultValue": "gpt-4o",
       "metadata": {
         "description": "Azure OpenAI model name (must be available in the target region)."
       }
@@ -84,36 +84,30 @@
         "description": "VM administrator username."
       }
     },
-    "adminPassword": {
-      "type": "securestring",
-      "metadata": {
-        "description": "VM administrator password (if not using SSH key authentication). Must meet Azure complexity requirements."
-      }
-    },
     "spotVM": {
       "type": "bool",
       "defaultValue": false,
       "metadata": {
-        "description": "是否在部署时使用 Spot 虚拟机（默认 false）。"
+        "description": "Using Spot VM (default false)."
       }
     },
     "spotMaxPrice": {
       "type": "int",
       "defaultValue": -1,
       "metadata": {
-        "description": "Spot VM 的最大价格（美元）。-1 表示使用市场默认价。"
+        "description": "Maximum price for Spot VM (USD). -1 means using the market default price."
       }
     },
     "dynaIP": {
       "type": "bool",
       "defaultValue": false,
       "metadata": {
-        "description": "是否为 Public IP 使用动态分配（默认 false）。"
+        "description": "Whether to use dynamic allocation for the Public IP (default false)."
       }
     },
     "scriptsRepoUrl": {
       "type": "string",
-      "defaultValue": "https://github.com/HaoHoo/azure-opencalw.git",
+      "defaultValue": "https://github.com/HaoHoo/azure-openclaw.git",
       "metadata": {
         "description": "Git URL containing the helper scripts deployed to the VM."
       }
@@ -235,9 +229,6 @@
             },
             "adminUsername": {
               "type": "string"
-            },
-            "adminPassword": {
-              "type": "securestring"
             },
             "spotVM": {
               "type": "bool",
