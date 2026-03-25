@@ -103,6 +103,11 @@ else
     echo "[openclaw] OpenClaw already installed, skipping install step."
 fi
 
+if command -v openclaw &>/dev/null; then
+    echo "[openclaw] Ensuring OpenClaw gateway is installed."
+    openclaw gateway install || true
+fi
+
 OPENCLAW_CONFIG_DIR="${ADMIN_HOME}/.openclaw"
 OPENCLAW_ENV_FILE="${OPENCLAW_CONFIG_DIR}/.azure.env"
 OPENCLAW_CONFIG="${OPENCLAW_CONFIG_DIR}/openclaw.json"
@@ -139,8 +144,8 @@ try:
 except (FileNotFoundError, json.JSONDecodeError):
     data = {}
 
-data.setdefault('meta', {})
-data['meta'].update({'name': 'Azure-OpenClaw', 'version': '1.0.0'})
+# data.setdefault('meta', {})
+# data['meta'].update({'name': 'Azure-OpenClaw', 'version': '1.0.0'})
 
 models = data.setdefault('models', {})
 models['mode'] = 'merge'
@@ -171,15 +176,26 @@ agents = data.setdefault('agents', {})
 defaults = agents.setdefault('defaults', {})
 defaults.update({
     'model': f"azure-openai/{model_id}",
-    'workspace': os.environ['WORKSPACE_DIR']
+    'workspace': os.environ['WORKSPACE_DIR'],
+    'compaction': {
+        'mode': 'safeguard'
+    }
 })
 
 gateway = data.setdefault('gateway', {})
 gateway.update({
     'port': int(os.environ['AZURE_OPENCLAW_PORT']),
-    'host': '0.0.0.0',
     'mode': 'local',
-    'trustProxy': True
+    'bind': 'lan',
+    'controlUi': {
+        'enabled': True,
+        'basePath': '/openclaw',
+            'allowedOrigins': [
+            'http://localhost:${AZURE_OPENCLAW_PORT}',
+            'http://127.0.0.1:${AZURE_OPENCLAW_PORT}',
+            'http://${AZURE_OPENCLAW_PUBLICIP}:${AZURE_OPENCLAW_PORT}'
+            ]
+       }
 })
 
 config_path.write_text(json.dumps(data, indent=2))
@@ -187,6 +203,8 @@ print(f"[openclaw] Configuration persisted to {config_path} and {os.environ['OPE
 PYEOF
 
 echo "[openclaw] Configuration complete."
+
+
 
 run_set_dync_dns() {
     if [[ "${DYNAMIC_IP_ENABLED}" == "true" ]] && [[ -x "${SCRIPTS_DIR}/set-dync-dns.sh" ]]; then

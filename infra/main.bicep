@@ -45,13 +45,13 @@ param adminUsername string = 'azureuser'
 @secure()
 param adminPassword string
 
-@description('是否在部署时使用 Spot 虚拟机（默认 false）。')
+@description('Using Spot VM? (false by default).')
 param spotVM bool = false
 
-@description('Spot VM 的最大价格（美元）。-1 表示使用市场默认价。')
+@description('Maximum price for Spot VM (USD). -1 means use market default price.')
 param spotMaxPrice int = -1
 
-@description('是否为 Public IP 使用动态分配（默认 false）。')
+@description('Using dynamic allocation for Public IP? (false by default).')
 param dynaIP bool = false
 @description('Git URL containing the helper scripts deployed to the VM.')
 param scriptsRepoUrl string = 'https://github.com/HaoHoo/azure-openclaw.git'

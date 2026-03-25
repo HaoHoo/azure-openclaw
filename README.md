@@ -25,5 +25,5 @@ Deploy OpenClaw on an Azure VM with an AI Foundry backend and keep your runtime 
 请在部署前确保 `vmAdminPassword` 等必填参数已经设置，并通过 `scripts/set-dync-dns.sh` 填写阿里云 DNS 信息以启用动态公网 IP 更新。
 
 ### ToDo
-1、调整openclaw.json的注入，修复不必要的数据引发的报错，提供远程连接等需要的字段
-2、添加开启远程连接的脚本。目前选项有 禁用设备验证（面向全网，但不安全，需给提示）、使用Caddy（面向全网，等我慢慢玩通）、使用Tailscale（仅面向受控节点，等我慢慢验证Azure VM的节点）。SSH方式计划放在md里说明。
+(@20260322)调整openclaw.json的注入，修复不必要的数据引发的报错，提供远程连接等需要的字 (done@20260325)
+(@20260322)添加开启远程连接的脚本。目前选项有 禁用设备验证（面向全网，但不安全，需给提示）、使用Candy（面向全网，等我慢慢玩通）、使用Tailscale（仅面向受控节点，等我慢慢验证Azure VM的节点）。SSH方式计划放在md里说明。(disableDevAuth, SSH tunnel done@20260325)
