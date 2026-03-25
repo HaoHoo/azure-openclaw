@@ -1,42 +1,51 @@
-{
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "location": {
-      "value": "eastus"
-    },
-    "resourcesNamePrefix": {
-      "value": "azure-openclaw"
-    },
-    "resourceGroupName": {
-      "value": "azure-openclaw-rg"
-    },
-    "vmName": {
-      "value": "azure-openclaw-vm"
-    },
-    "vmSize": {
-      "value": "Standard_B1ms"
-    },
-    "vnetName": {
-      "value": "azure-openclaw-vnet"
-    },
-    "publicIpName": {
-      "value": "azure-openclaw-publicip"
-    },
-    "foundryName": {
-      "value": "azure-openclaw-foundry"
-    },
-    "modelName": {
-      "value": "gpt-4o"
-    },
-    "modelDeploymentName": {
-      "value": "gpt-4o"
-    },
-    "openclawPort": {
-      "value": 18789
-    },
-    "adminUsername": {
-      "value": "azureuser"
+  {
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "location": {
+        "value": "eastus"
+      },
+      "openclawName": {
+        "value": "azure-openclaw"
+      },
+      "vmName": {
+        "value": "azure-openclaw-vm"
+      },
+      "vmSize": {
+        "value": "Standard_B1ms"
+      },
+      "vnetName": {
+        "value": "azure-openclaw-vnet"
+      },
+      "publicIpName": {
+        "value": "azure-openclaw-publicip"
+      },
+      "foundryName": {
+        "value": "azure-openclaw-foundry"
+      },
+      "modelName": {
+        "value": "gpt-4o"
+      },
+      "openclawPort": {
+        "value": 18789
+      },
+      "adminUsername": {
+        "value": "azureuser"
+      },
+      "spotVM": {
+        "value": false
+      },
+      "spotMaxPrice": {
+        "value": -1
+      },
+      "dynaIP": {
+        "value": false
+      },
+      "scriptsRepoUrl": {
+        "value": "https://github.com/HaoHoo/azure-openclaw.git"
+      },
+      "scriptsRepoRef": {
+        "value": "main"
+      }
     }
   }
-}
