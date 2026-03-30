@@ -27,7 +27,12 @@ for var in "${required[@]}"; do
   fi
 done
 
+
+
 echo "[apikey] refreshing API key for ${AZURE_OPENAI_ACCOUNT_NAME}"
+if ! az login --identity >/dev/null 2>&1; then
+  echo "Need to grant managed identity to the VM computer account in Entra ID, or run 'az login --device' manually then run this script again" >&2
+fi
 key=$(az cognitiveservices account keys list \
   --name "${AZURE_OPENAI_ACCOUNT_NAME}" \
   --resource-group "${AZURE_OPENAI_RESOURCE_GROUP}" \

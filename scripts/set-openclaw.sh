@@ -105,7 +105,7 @@ fi
 
 if command -v openclaw &>/dev/null; then
     echo "[openclaw] Ensuring OpenClaw gateway is installed."
-    openclaw gateway install || true
+    sudo -u ${AZURE_ADMIN_USERNAME} XDG_RUNTIME_DIR=/run/user/$(id -u ${AZURE_ADMIN_USERNAME}) openclaw gateway install || true
 fi
 
 OPENCLAW_CONFIG_DIR="${ADMIN_HOME}/.openclaw"
@@ -125,6 +125,7 @@ AZURE_MODEL_DEPLOYMENT_NAME=${AZURE_MODEL_DEPLOYMENT_NAME}
 AZURE_RESOURCE_JSON_PATH=${AZURE_RESOURCE_JSON_PATH}
 AZURE_ADMIN_USERNAME=${AZURE_ADMIN_USERNAME}
 AZURE_OPENCLAW_PORT=${AZURE_OPENCLAW_PORT}
+AZURE_OPENCLAW_PUBLICIP=${AZURE_OPENCLAW_PUBLICIP}
 AZURE_DYNAMIC_IP=${AZURE_DYNAMIC_IP:-false}
 AZURE_DNS_JSON_PATH=${AZURE_DNS_JSON_PATH:-${SCRIPTS_DIR}/update-dns/ddns.json}
 AZURE_SCRIPTS_REPO_URL=${REPO_URL}
@@ -143,9 +144,6 @@ try:
     data = json.loads(config_path.read_text())
 except (FileNotFoundError, json.JSONDecodeError):
     data = {}
-
-# data.setdefault('meta', {})
-# data['meta'].update({'name': 'Azure-OpenClaw', 'version': '1.0.0'})
 
 models = data.setdefault('models', {})
 models['mode'] = 'merge'
@@ -183,6 +181,13 @@ defaults.update({
 })
 
 gateway = data.setdefault('gateway', {})
+allowed_origins = [
+    f"http://localhost:{os.environ['AZURE_OPENCLAW_PORT']}",
+    f"http://127.0.0.1:{os.environ['AZURE_OPENCLAW_PORT']}",
+]
+public_ip = os.environ.get('AZURE_OPENCLAW_PUBLICIP')
+if public_ip:
+    allowed_origins.append(f"http://{public_ip}:{os.environ['AZURE_OPENCLAW_PORT']}")
 gateway.update({
     'port': int(os.environ['AZURE_OPENCLAW_PORT']),
     'mode': 'local',
@@ -190,12 +195,8 @@ gateway.update({
     'controlUi': {
         'enabled': True,
         'basePath': '/openclaw',
-            'allowedOrigins': [
-            'http://localhost:${AZURE_OPENCLAW_PORT}',
-            'http://127.0.0.1:${AZURE_OPENCLAW_PORT}',
-            'http://${AZURE_OPENCLAW_PUBLICIP}:${AZURE_OPENCLAW_PORT}'
-            ]
-       }
+        'allowedOrigins': allowed_origins
+    }
 })
 
 config_path.write_text(json.dumps(data, indent=2))
@@ -204,7 +205,7 @@ PYEOF
 
 echo "[openclaw] Configuration complete."
 
-
+sudo chown -R "${AZURE_ADMIN_USERNAME}:${AZURE_ADMIN_USERNAME}" "${ADMIN_HOME}"
 
 run_set_dync_dns() {
     if [[ "${DYNAMIC_IP_ENABLED}" == "true" ]] && [[ -x "${SCRIPTS_DIR}/set-dync-dns.sh" ]]; then

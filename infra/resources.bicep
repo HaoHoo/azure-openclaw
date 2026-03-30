@@ -289,6 +289,8 @@ var cloudInitContent = replace(cloudInitTemplate, '__ADMIN_USERNAME__', adminUse
 // A header that exports the OpenAI credentials is prepended to the
 // configure-openclaw.sh body so the script can read them as env vars.
 // NOTE: \'  is used to produce a literal single quote inside the shell export statement.
+var publicIpAddress = publicIp.properties.ipAddress
+
 var configScriptHeader = concat(
   '#!/bin/bash\nset -euo pipefail\n\n',
   'export HOME=/home/', adminUsername, '\n',
@@ -302,6 +304,7 @@ var configScriptHeader = concat(
   'export AZURE_MODEL_DEPLOYMENT_NAME=', modelDeploymentName, '\n',
   'export AZURE_OPENAI_RESOURCE_GROUP=', resourceGroupName, '\n',
   'export AZURE_OPENCLAW_PORT=', string(openclawPort), '\n',
+  'export AZURE_OPENCLAW_PUBLICIP=', publicIpAddress, '\n',
   'export AZURE_INFRA_DIR=', infraDir, '\n',
   'export AZURE_RESOURCE_JSON_PATH=', infraDir, '/resource.json\n',
   'export AZURE_DNS_JSON_PATH=', infraDir, '/dns.json\n',
