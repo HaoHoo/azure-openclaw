@@ -282,6 +282,8 @@ runcmd:
   - npm --version
   - curl -sL https://aka.ms/InstallAzureCLIDeb | bash
   - az version
+  - curl -sL https://aka.ms/install-azd.sh | bash
+  - azd version
 '''
 var cloudInitContent = replace(cloudInitTemplate, '__ADMIN_USERNAME__', adminUsername)
 

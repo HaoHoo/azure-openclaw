@@ -28,26 +28,31 @@ run_option() {
 	case "$1" in
 		1)
 			# choice 1: Disable Device Authentication (Not Recommended)
-			echo 'This option allows you to disable device authentication for OpenClaw, which is not recommended due to security risks.'
+			echo 'This option disables device authentication for OpenClaw.'
+			echo 'It is not recommended due to security risks.'
 			# run the shell file to disable device authentication
 			bash "${SCRIPT_DIR}/openremote/disable_dev_auth.sh"
 			;;
 		2)
 			# choice 2: Tailscale Tunnel
-			echo 'This option sets up a Tailscale tunnel to securely access OpenClaw remotely. But only Tailscale clients can access OpenClaw with this option.'
+			echo 'This option sets up a Tailscale tunnel for secure remote access.'
+			echo 'Only Tailscale clients can access OpenClaw with this option.'
 			# run the shell file to set up Tailscale tunnel
 			bash "${SCRIPT_DIR}/openremote/setup_tailscale.sh"
 			;;
 		3)
 			# choice 3: Local Proxy
-			echo 'This option configures OpenClaw to be accessed through a local proxy. This allows you to access OpenClaw remotely by connecting to the proxy server.'
+			echo 'This option configures OpenClaw behind a local proxy.'
+			echo 'You can access OpenClaw remotely via the proxy server.'
 			# run the shell file to set up local proxy
 			bash "${SCRIPT_DIR}/openremote/setup_re_proxy.sh"
 			;;
 		4)
 			# choice 4: SSH Tunnel
-			echo 'This option sets up an SSH tunnel to securely access OpenClaw remotely. This allows you to access OpenClaw remotely by connecting to the SSH server.'
-			echo 'Run the following command on your local machine to create an SSH tunnel: ssh -L <local_port>:localhost:<openclaw_port> <username>@<server_ip>'
+			echo 'This option uses an SSH tunnel for secure remote access.'
+			echo 'You can access OpenClaw remotely through the SSH server.'
+			echo 'Run this on your local machine to create an SSH tunnel:'
+			echo 'ssh -L <local_port>:localhost:<openclaw_port> <username>@<server_ip>'
 			;;
 		*)
 			echo 'Invalid option. Please select 1-4.'

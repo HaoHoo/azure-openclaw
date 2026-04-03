@@ -19,7 +19,14 @@ set +o allexport
 
 resource_file="${AZURE_RESOURCE_JSON_PATH:-${ADMIN_HOME}/infra/resource.json}"
 
-required=(AZURE_OPENAI_ACCOUNT_NAME AZURE_OPENAI_RESOURCE_GROUP AZURE_OPENAI_MODEL AZURE_OPENAI_ENDPOINT AZURE_OPENCLAW_PORT AZURE_RESOURCE_JSON_PATH)
+required=(
+  AZURE_OPENAI_ACCOUNT_NAME
+  AZURE_OPENAI_RESOURCE_GROUP
+  AZURE_OPENAI_MODEL
+  AZURE_OPENAI_ENDPOINT
+  AZURE_OPENCLAW_PORT
+  AZURE_RESOURCE_JSON_PATH
+)
 for var in "${required[@]}"; do
   if [[ -z "${!var:-}" ]]; then
     echo "[apikey] ${var} is not defined in ${ENV_FILE}" >&2
@@ -31,7 +38,8 @@ done
 
 echo "[apikey] refreshing API key for ${AZURE_OPENAI_ACCOUNT_NAME}"
 if ! az login --identity >/dev/null 2>&1; then
-  echo "Need to grant managed identity to the VM computer account in Entra ID, or run 'az login --device' manually then run this script again" >&2
+  echo "Need to grant managed identity to the VM computer account in Entra ID," >&2
+  echo "or run 'az login --device' manually then run this script again" >&2
 fi
 key=$(az cognitiveservices account keys list \
   --name "${AZURE_OPENAI_ACCOUNT_NAME}" \
@@ -81,7 +89,8 @@ path.write_text(json.dumps(data, indent=2))
 print('[apikey] resource metadata updated at', path)
 PYEOF
 else
-  echo "[apikey] resource metadata not found at ${resource_file}; skipping persistence" >&2
+  echo "[apikey] resource metadata not found at ${resource_file};" >&2
+  echo "[apikey] skipping persistence" >&2
 fi
 
 WORKSPACE_DIR="${OPENCLAW_CONFIG_DIR}/workspace"
