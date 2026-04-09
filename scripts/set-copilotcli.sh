@@ -1,5 +1,5 @@
 # Install Copilot CLI
-curl -fsSL https://aka.ms/get-copilotcli | bash
+curl -fsSL https://gh.io/copilot-install | bash
 
 if command -v copilot &>/dev/null; then
     echo "[copilotcli] Copilot CLI installed successfully. Please login & initialize."
