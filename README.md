@@ -11,40 +11,24 @@ https%3A%2F%2Fraw.githubusercontent.com%2FHaoHoo%2Fazure-openclaw%2Fmain%2Finfra
 ## Overview (English)
 - **Infrastructure-first** – Two Bicep modules wire up networking, a Linux VM,
   Azure OpenAI, and AI Foundry. `infra/main.bicep` exposes the knobs
-  (`modelName`, `openclawPort`, `dynaIP`, `scriptsRepoUrl`, etc.) and forwards
-  them into the resource module, while `infra/resources.bicep` injects the
-  cloud-init bootstrap and the Custom Script Extension payload.
-- **azd 自动部署标准布局** – 仓库根目录保留 `azure.yaml`
-  （引用 `infra/main.bicep`）、`infra/`、`scripts/` 以及 helper，
-  azd/快速部署按钮可以自动检测模板，并从 `scripts/set-openclaw.sh`
-  启动安装逻辑。
+  (`modelName`, `openclawPort`, `dynaIP`, `scriptsRepoUrl`, etc.) and forwards them into the resource module, while `infra/resources.bicep` injects the cloud-init bootstrap and the Custom Script Extension payload.
 - **Setup script workflow** – The Custom Script Extension runs
-  `scripts/set-openclaw.sh`, which clones this repository, copies the complete
-  `scripts/` directory into the administrator home, records the environment
-  metadata (including whether dynamic IP is enabled), installs OpenClaw,
-  merges `openclaw.json`, and wires cron jobs for `update-apikey.sh` and
-  `update-ddns-a.sh`.
+  `scripts/set-openclaw.sh`, which clones this repository, copies the complete `scripts/` directory into the administrator home, records the environment metadata (including whether dynamic IP is enabled), installs OpenClaw, merges `openclaw.json`, and wires cron jobs for `update-apikey.sh` and `update-ddns-a.sh`.
 - **Dynamic DNS ready** – When dynamic public IP is enabled,
-  `set-openclaw.sh` runs `set-dync-dns.sh`; the helper prompts you to pick a
-  provider (currently Aliyun), saves your credentials/domain/record info under
-  the `aliyun` section of `scripts/update-dns/ddns.json`, and rewrites
-  `update-ddns-a.sh` into an Aliyun-specific updater that re-reads that JSON
-  on every run (including the latest `recordId`/`currentIp`) before calling
-  the Aliyun CLI, so removing the provider field is now safe and future
-  providers can share the same driver pattern.
+  `set-openclaw.sh` runs `set-dync-dns.sh`; the helper prompts you to pick a provider (currently Aliyun), saves your credentials/domain/record info under the `aliyun` section of `scripts/update-dns/ddns.json`, and rewrites `update-ddns-a.sh` into an Aliyun-specific updater that re-reads that JSON on every run (including the latest `recordId`/`currentIp`) before calling the Aliyun CLI, so removing the provider field is now safe and future providers can share the same driver pattern.
 - **Secure metadata refresh** – `update-apikey.sh` sources the generated
   `.azure.env`, hits Azure to refresh the OpenAI key, writes the latest
-  metadata to `resource.json`, and rewrites `~/.openclaw/openclaw.json` so
-  OpenClaw always uses the newest endpoint/key.
-- **Reusable helpers** – Because the scripts directory is replaced wholesale
-  via git clone, you can add new helpers (or new DDNS providers) and publish
-  them in this repo; `set-openclaw.sh` will pull them down automatically on
-  every deployment.
+  metadata to `resource.json`, and rewrites `~/.openclaw/openclaw.json` so OpenClaw always uses the newest endpoint/key.
+- **Reusable helpers** – Because the scripts directory is replaced wholesale via git clone, you can add new helpers (or new DDNS providers) and publish them in this repo; `set-openclaw.sh` will pull them down automatically on every deployment.
 
 ## 部署说明（中文）
 - **一键部署** – `azd up` 或 `az deployment group create`
   会先创建资源组、VM、AI Foundry、OpenAI 账号和模型部署，
   再通过 Custom Script 自动运行 `scripts/set-openclaw.sh`。
+- **azd 自动部署标准布局** – 仓库根目录保留 `azure.yaml`
+  （引用 `infra/main.bicep`）、`infra/`、`scripts/` 以及 helper，
+  azd/快速部署按钮可以自动检测模板，并从 `scripts/set-openclaw.sh`
+  启动安装逻辑。
 - **脚本如何加载** – `set-openclaw.sh` 会 clone 指定的
   `scriptsRepoUrl`/`scriptsRepoRef`，把全部 `scripts/` 复制到
   `/home/<admin>/scripts`、赋予执行权限，并向 `.azure.env`、
@@ -69,12 +53,15 @@ https%3A%2F%2Fraw.githubusercontent.com%2FHaoHoo%2Fazure-openclaw%2Fmain%2Finfra
     `set-openclaw.sh`、`set-dync-dns.sh`、`set-dns-ali.sh`、
     `update-ddns-a.sh`、`update-apikey.sh` 等 helper。
 
-请在部署前确保 `vmAdminPassword` 等必填参数已经设置，并通过
+请在部署前确保 `vmAdminPassword` 等必填参数已经设置。如果需要，通过
 `scripts/set-dync-dns.sh` 填写阿里云 DNS 信息以启用动态公网 IP 更新。
 
 ### ToDo
 (@20260322)调整openclaw.json的注入，修复不必要的数据引发的报错，提供远程连接等需要的字 (done@20260325)
+
 (@20260322)添加开启远程连接的脚本。目前选项有 禁用设备验证
 （面向全网，但不安全，需给提示）、使用Candy（面向全网，等我慢慢玩通）、
 使用Tailscale（仅面向受控节点，等我慢慢验证Azure VM的节点）。
 SSH方式计划放在md里说明。(disableDevAuth, SSH tunnel done@20260325)
+
+(@20260410)添加Copilot CLI的安装和配置ACP。copilot的aka.ms链接坏了，改gh.io了。（待测）添加小配置VM的优化：opt-vps&arm.sh。发现之前VM配置低有时候响应慢。（待测）

@@ -1,6 +1,10 @@
 # Install Copilot CLI
 curl -fsSL https://gh.io/copilot-install | bash
 
+export PATH="$HOME/.local/bin:$PATH"
+echo "$PATH"
+source ~/.bash_profile
+
 if command -v copilot &>/dev/null; then
     echo "[copilotcli] Copilot CLI installed successfully. Please login & initialize."
     copilot login
@@ -36,5 +40,7 @@ PYEOF
 
 else
     echo "[copilotcli] OpenClaw config not found, skipping acp policy insertion."
+fi
+
 fi
 
