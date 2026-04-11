@@ -1,23 +1,29 @@
 # Install Copilot CLI
-curl -fsSL https://gh.io/copilot-install | bash
-
 export PATH="$HOME/.local/bin:$PATH"
-echo "$PATH"
-source ~/.bash_profile
+sudo chown $USER:$USER $HOME/.cache
 
 if command -v copilot &>/dev/null; then
-    echo "[copilotcli] Copilot CLI installed successfully. Please login & initialize."
-    copilot login
-    copilot init
+    echo "[copilotcli] Copilot CLI already installed, skipping installation."
 else
-    echo "[copilotcli] Failed to install Copilot CLI."
+    if curl -fsSL https://gh.io/copilot-install | bash; then
+        if command -v copilot &>/dev/null; then
+            source ~/.bash_profile
+            echo "[copilotcli] Copilot CLI installed successfully. Please login & initialize in CLI."
+        else
+            echo "[copilotcli] Failed to install Copilot CLI."
+        fi
+    else
+        echo "[copilotcli] Failed to get Copilot CLI."
+    fi
 fi
+
 
 # Insert acp policy to OpenClaw config if it exists
 if command -v openclaw &>/dev/null; then
     echo "[copilotcli] Adding acp policy to OpenClaw config."
-    OPENCLAW_CONFIG_DIR="${ADMIN_HOME}/.openclaw"
+    OPENCLAW_CONFIG_DIR="$HOME/.openclaw"
     OPENCLAW_CONFIG="${OPENCLAW_CONFIG_DIR}/openclaw.json"
+    export OPENCLAW_CONFIG
     if [ -f "${OPENCLAW_CONFIG}" ]; then
         python3 - <<'PYEOF'
 

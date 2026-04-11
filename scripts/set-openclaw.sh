@@ -40,7 +40,7 @@ clone_scripts() {
         if [[ -d "${TMP_SCRIPTS_REPO}/scripts" ]]; then
             cp -R "${TMP_SCRIPTS_REPO}/scripts/." "${SCRIPTS_DIR}/"
         fi
-        chown -R "${AZURE_ADMIN_USERNAME}:${AZURE_ADMIN_USERNAME}" "${SCRIPTS_DIR}"
+        chown -hR "${AZURE_ADMIN_USERNAME}:${AZURE_ADMIN_USERNAME}" "${SCRIPTS_DIR}"
         find "${SCRIPTS_DIR}" -type f -name '*.sh' -exec chmod +x {} +
     else
         echo "[openclaw] Failed to clone ${REPO_URL}@${REPO_REF}; keeping existing helpers if any" >&2
@@ -104,8 +104,19 @@ else
 fi
 
 if command -v openclaw &>/dev/null; then
-    echo "[openclaw] Ensuring OpenClaw gateway is installed."
-    sudo -u ${AZURE_ADMIN_USERNAME} XDG_RUNTIME_DIR=/run/user/$(id -u ${AZURE_ADMIN_USERNAME}) openclaw gateway install || true
+    echo "[openclaw] Checking OpenClaw gateway status."
+    if sudo -u "${AZURE_ADMIN_USERNAME}" XDG_RUNTIME_DIR="/run/user/$(id -u "${AZURE_ADMIN_USERNAME}")" openclaw gateway status --require-rpc >/dev/null 2>&1; then
+        echo "[openclaw] OpenClaw gateway is healthy."
+    else
+        echo "[openclaw] OpenClaw gateway not ready, running gateway install."
+        sudo -u "${AZURE_ADMIN_USERNAME}" XDG_RUNTIME_DIR="/run/user/$(id -u "${AZURE_ADMIN_USERNAME}")" openclaw gateway install || true
+
+        if sudo -u "${AZURE_ADMIN_USERNAME}" XDG_RUNTIME_DIR="/run/user/$(id -u "${AZURE_ADMIN_USERNAME}")" openclaw gateway status --require-rpc >/dev/null 2>&1; then
+            echo "[openclaw] OpenClaw gateway is healthy after install."
+        else
+            echo "[openclaw] OpenClaw gateway is still not ready after install; continue provisioning."
+        fi
+    fi
 fi
 
 OPENCLAW_CONFIG_DIR="${ADMIN_HOME}/.openclaw"
@@ -243,5 +254,6 @@ if [[ -x "${SCRIPTS_DIR}/update-apikey.sh" ]]; then
 else
     echo "[openclaw] update-apikey.sh not found in ${SCRIPTS_DIR}" >&2
 fi
+
 
 echo "[openclaw] set-openclaw.sh completed"
