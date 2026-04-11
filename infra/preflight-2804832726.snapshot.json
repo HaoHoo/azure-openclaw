@@ -1,0 +1,261 @@
+{
+  "predictedResources": [
+    {
+      "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.Network/networkSecurityGroups/azure-openclaw-vm-nsg",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "azure-openclaw-vm-nsg",
+      "apiVersion": "2023-11-01",
+      "location": "eastus",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "allow-ssh",
+            "properties": {
+              "priority": 100,
+              "protocol": "Tcp",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "22",
+              "description": "Allow inbound SSH for VM management"
+            }
+          },
+          {
+            "name": "allow-openclaw",
+            "properties": {
+              "priority": 110,
+              "protocol": "Tcp",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "18789",
+              "description": "Allow inbound traffic on the OpenClaw service port"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.Network/virtualNetworks/azure-openclaw-vnet",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "azure-openclaw-vnet",
+      "apiVersion": "2023-11-01",
+      "location": "eastus",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "default",
+            "properties": {
+              "addressPrefix": "10.0.0.0/24",
+              "networkSecurityGroup": {
+                "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.Network/networkSecurityGroups/azure-openclaw-vm-nsg"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.Network/publicIPAddresses/azure-openclaw-publicip",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "azure-openclaw-publicip",
+      "apiVersion": "2023-11-01",
+      "location": "eastus",
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "azure-openclaw-vm"
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.Network/networkInterfaces/azure-openclaw-vm-nic",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "azure-openclaw-vm-nic",
+      "apiVersion": "2023-11-01",
+      "location": "eastus",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.Network/virtualNetworks/azure-openclaw-vnet/subnets/default"
+              },
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.Network/publicIPAddresses/azure-openclaw-publicip"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.Network/networkSecurityGroups/azure-openclaw-vm-nsg"
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.Storage/storageAccounts/azureopenclawstisfop6wws",
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "azureopenclawstisfop6wws",
+      "apiVersion": "2023-04-01",
+      "location": "eastus",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "supportsHttpsTrafficOnly": true,
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false
+      }
+    },
+    {
+      "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.KeyVault/vaults/azureopenclaw-kvpqmqvyue",
+      "type": "Microsoft.KeyVault/vaults",
+      "name": "azureopenclaw-kvpqmqvyue",
+      "apiVersion": "2023-07-01",
+      "location": "eastus",
+      "properties": {
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "tenantId": "[tenant().tenantId]",
+        "enableRbacAuthorization": true,
+        "enableSoftDelete": true,
+        "softDeleteRetentionInDays": 7,
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.MachineLearningServices/workspaces/azure-openclaw-foundry",
+      "type": "Microsoft.MachineLearningServices/workspaces",
+      "name": "azure-openclaw-foundry",
+      "apiVersion": "2024-04-01",
+      "location": "eastus",
+      "sku": {
+        "name": "Basic",
+        "tier": "Basic"
+      },
+      "kind": "Hub",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "friendlyName": "azure-openclaw-foundry",
+        "storageAccount": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.Storage/storageAccounts/azureopenclawstisfop6wws",
+        "keyVault": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.KeyVault/vaults/azureopenclaw-kvpqmqvyue",
+        "hbiWorkspace": false
+      }
+    },
+    {
+      "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.CognitiveServices/accounts/azureopenclawoai7dfm4dwv",
+      "type": "Microsoft.CognitiveServices/accounts",
+      "name": "azureopenclawoai7dfm4dwv",
+      "apiVersion": "2023-05-01",
+      "location": "eastus",
+      "sku": {
+        "name": "S0"
+      },
+      "kind": "OpenAI",
+      "properties": {
+        "customSubDomainName": "azureopenclawoai7dfm4dwv",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.CognitiveServices/accounts/azureopenclawoai7dfm4dwv/deployments/gpt-4o",
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "name": "azureopenclawoai7dfm4dwv/gpt-4o",
+      "apiVersion": "2023-05-01",
+      "sku": {
+        "name": "Standard",
+        "capacity": 30
+      },
+      "properties": {
+        "model": {
+          "format": "OpenAI",
+          "name": "gpt-4o"
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.Compute/virtualMachines/azure-openclaw-vm",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "azure-openclaw-vm",
+      "apiVersion": "2024-03-01",
+      "location": "eastus",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_B1ms"
+        },
+        "priority": "Regular",
+        "evictionPolicy": null,
+        "billingProfile": null,
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "0001-com-ubuntu-server-jammy",
+            "sku": "22_04-lts-gen2",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "azure-openclaw-vm-osdisk",
+            "caching": "ReadWrite",
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "StandardSSD_LRS"
+            }
+          }
+        },
+        "osProfile": {
+          "computerName": "azure-openclaw-vm",
+          "adminUsername": "azureuser",
+          "adminPassword": "[parameters('adminPassword')]",
+          "customData": "I2Nsb3VkLWNvbmZpZwojIFByZS1pbnN0YWxsIE5vZGUuanMgMjIsIFB5dGhvbiAzLCBBenVyZSBDTEksIGFuZCBHaXQgb24gZmlyc3QgYm9vdC4KIyBUaGlzIGNvbnRlbnQgaXMgYmFzZTY0LWVuY29kZWQgYW5kIHBhc3NlZCB2aWEgb3NQcm9maWxlLmN1c3RvbURhdGEuCgpwYWNrYWdlX3VwZGF0ZTogdHJ1ZQpwYWNrYWdlX3VwZ3JhZGU6IGZhbHNlCgpwYWNrYWdlczoKICAtIGdpdAogIC0gcHl0aG9uMwogIC0gcHl0aG9uMy1waXAKICAtIGN1cmwKICAtIGpxCgpydW5jbWQ6CiAgIyBJbnN0YWxsIE5vZGUuanMgMjIgZnJvbSB0aGUgb2ZmaWNpYWwgTm9kZVNvdXJjZSByZXBvc2l0b3J5CiAgLSBjdXJsIC1mc1NMIGh0dHBzOi8vZGViLm5vZGVzb3VyY2UuY29tL3NldHVwXzIyLnggfCBiYXNoIC0KICAtIGFwdC1nZXQgaW5zdGFsbCAteSBub2RlanMKICAtIG5vZGUgLS12ZXJzaW9uCiAgLSBucG0gLS12ZXJzaW9uCiAgLSBjdXJsIC1zTCBodHRwczovL2FrYS5tcy9JbnN0YWxsQXp1cmVDTElEZWIgfCBiYXNoCiAgLSBheiB2ZXJzaW9uCiAgLSBjdXJsIC1zTCBodHRwczovL2FrYS5tcy9pbnN0YWxsLWF6ZC5zaCB8IGJhc2gKICAtIGF6ZCB2ZXJzaW9uCg==",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": false
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.Network/networkInterfaces/azure-openclaw-vm-nic"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.Compute/virtualMachines/azure-openclaw-vm/extensions/set-openclaw",
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "azure-openclaw-vm/set-openclaw",
+      "apiVersion": "2024-03-01",
+      "location": "eastus",
+      "properties": {
+        "publisher": "Microsoft.Azure.Extensions",
+        "type": "CustomScript",
+        "typeHandlerVersion": "2.1",
+        "autoUpgradeMinorVersion": true,
+        "protectedSettings": {
+          "script": "[base64(format('{0}{1}{2}', concat('#!/bin/bash\nset -euo pipefail\n\n', 'export HOME=/home/', 'azureuser', '\n', 'export AZURE_OPENAI_ENDPOINT=', 'https://azureopenclawoai7dfm4dwv.openai.azure.com/', '\n', 'export AZURE_OPENAI_APIKEY=', listKeys('/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.CognitiveServices/accounts/azureopenclawoai7dfm4dwv', '2023-05-01').key1, '\n', 'export AZURE_OPENAI_ACCOUNT_NAME=', 'azureopenclawoai7dfm4dwv', '\n', 'export AZURE_RESOURCE_GROUP_NAME=', 'azure-openclaw-rg', '\n', 'export AZURE_REGION=', 'eastus', '\n', 'export AZURE_MODEL_NAME=', 'gpt-4o', '\n', 'export AZURE_OPENAI_MODEL=', 'gpt-4o', '\n', 'export AZURE_MODEL_DEPLOYMENT_NAME=', 'gpt-4o', '\n', 'export AZURE_OPENAI_RESOURCE_GROUP=', 'azure-openclaw-rg', '\n', 'export AZURE_OPENCLAW_PORT=', '18789', '\n', 'export AZURE_OPENCLAW_PUBLICIP=', reference('/subscriptions/ec8ebaab-42e4-42e9-a410-6d182aff2037/resourceGroups/azure-openclaw-rg/providers/Microsoft.Network/publicIPAddresses/azure-openclaw-publicip', '2023-11-01').ipAddress, '\n', 'export AZURE_INFRA_DIR=', '/home/azureuser/infra', '\n', 'export AZURE_RESOURCE_JSON_PATH=', '/home/azureuser/infra', '/resource.json\n', 'export AZURE_DNS_JSON_PATH=', '/home/azureuser/infra', '/dns.json\n', 'export AZURE_DYNAMIC_IP=', 'False', '\n', 'export AZURE_ADMIN_USERNAME=', 'azureuser', '\n', 'export AZURE_SCRIPTS_REPO_URL=', 'https://github.com/HaoHoo/azure-openclaw.git', '\n', 'export AZURE_SCRIPTS_REPO_REF=', 'main', '\n\n'), '#!/bin/bash\n# set-openclaw.sh\n#\n# Installed and configured by the Azure VM Custom Script Extension.\n# Variables exported by the Bicep template:\n#   AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_APIKEY, AZURE_OPENAI_ACCOUNT_NAME,\n#   AZURE_RESOURCE_GROUP_NAME, AZURE_REGION, AZURE_MODEL_NAME,\n#   AZURE_MODEL_DEPLOYMENT_NAME, AZURE_OPENAI_RESOURCE_GROUP, AZURE_OPENCLAW_PORT,\n#   AZURE_INFRA_DIR, AZURE_RESOURCE_JSON_PATH, AZURE_DNS_JSON_PATH,\n#   AZURE_DYNAMIC_IP, AZURE_ADMIN_USERNAME,\n#   AZURE_SCRIPTS_REPO_URL, AZURE_SCRIPTS_REPO_REF\n\nset -euo pipefail\n\nAZURE_ADMIN_USERNAME=${AZURE_ADMIN_USERNAME:-${SUDO_USER:-${USER:-$(whoami)}}}\n\nif command -v cloud-init &>/dev/null; then\n    cloud-init status --wait 2>/dev/null || true\nfi\n\nADMIN_HOME=\"${HOME:-/home/${AZURE_ADMIN_USERNAME}}\"\nSCRIPTS_DIR=\"${ADMIN_HOME}/scripts\"\nTMP_SCRIPTS_REPO=\"/tmp/azure-openclaw-scripts\"\nREPO_URL=\"${AZURE_SCRIPTS_REPO_URL:-https://github.com/HaoHoo/azure-opencalw.git}\"\nREPO_REF=\"${AZURE_SCRIPTS_REPO_REF:-main}\"\nDYNAMIC_IP_ENABLED=\"${AZURE_DYNAMIC_IP:-false}\"\n\nmkdir -p \"${SCRIPTS_DIR}\"\n\nclone_scripts() {\n    if ! command -v git &>/dev/null; then\n        echo \"[openclaw] git is unavailable; skipping helper script sync\"\n        return\n    fi\n\n    rm -rf \"${TMP_SCRIPTS_REPO}\"\n    if git clone --depth 1 --branch \"${REPO_REF}\" \"${REPO_URL}\" \"${TMP_SCRIPTS_REPO}\" >/tmp/openclaw-clone.log 2>&1; then\n        rm -rf \"${SCRIPTS_DIR}\"\n        mkdir -p \"${SCRIPTS_DIR}\"\n        if [[ -d \"${TMP_SCRIPTS_REPO}/scripts\" ]]; then\n            cp -R \"${TMP_SCRIPTS_REPO}/scripts/.\" \"${SCRIPTS_DIR}/\"\n        fi\n        chown -R \"${AZURE_ADMIN_USERNAME}:${AZURE_ADMIN_USERNAME}\" \"${SCRIPTS_DIR}\"\n        find \"${SCRIPTS_DIR}\" -type f -name ''*.sh'' -exec chmod +x {} +\n    else\n        echo \"[openclaw] Failed to clone ${REPO_URL}@${REPO_REF}; keeping existing helpers if any\" >&2\n    fi\n    rm -rf \"${TMP_SCRIPTS_REPO}\"\n}\n\nclone_scripts\n\npython3 - <<''PYEOF''\nimport datetime\nimport json\nimport os\nimport pathlib\n\nresource_path = os.path.expanduser(os.environ.get(''AZURE_RESOURCE_JSON_PATH'', ''''))\nif not resource_path:\n    raise SystemExit(''AZURE_RESOURCE_JSON_PATH is not set'')\n\nos.makedirs(os.path.dirname(resource_path), exist_ok=True)\n\nentry = {\n    ''deploymentName'': os.environ.get(''AZURE_MODEL_DEPLOYMENT_NAME'', ''''),\n    ''modelName'': os.environ.get(''AZURE_MODEL_NAME'', ''''),\n    ''accountName'': os.environ.get(''AZURE_OPENAI_ACCOUNT_NAME'', ''''),\n    ''resourceGroup'': os.environ.get(''AZURE_OPENAI_RESOURCE_GROUP'', os.environ.get(''AZURE_RESOURCE_GROUP_NAME'', '''')),\n    ''region'': os.environ.get(''AZURE_REGION'', ''''),\n    ''endpoint'': os.environ.get(''AZURE_OPENAI_ENDPOINT'', ''''),\n    ''lastUpdated'': datetime.datetime.utcnow().isoformat() + ''Z'',\n    ''adminUsername'': os.environ.get(''AZURE_ADMIN_USERNAME'', ''''),\n    ''openclawPort'': os.environ.get(''AZURE_OPENCLAW_PORT'', ''''),\n    ''modelDeploymentName'': os.environ.get(''AZURE_MODEL_DEPLOYMENT_NAME'', ''''),\n    ''dynamicIp'': os.environ.get(''AZURE_DYNAMIC_IP'', ''false'').lower() == ''true'',\n    ''scriptsRepoUrl'': os.environ.get(''AZURE_SCRIPTS_REPO_URL'', ''''),\n    ''scriptsRepoRef'': os.environ.get(''AZURE_SCRIPTS_REPO_REF'', '''')\n}\n\ntry:\n    data = json.loads(pathlib.Path(resource_path).read_text())\nexcept (FileNotFoundError, json.JSONDecodeError):\n    data = {}\n\nmodels = data.setdefault(''models'', [])\nfor idx, model in enumerate(models):\n    if (model.get(''deploymentName'') == entry[''deploymentName''] and\n            model.get(''accountName'') == entry[''accountName'']):\n        models[idx] = {**model, **entry}\n        break\nelse:\n    models.append(entry)\n\npathlib.Path(resource_path).write_text(json.dumps(data, indent=2))\nprint(''[openclaw] Resource metadata persisted to'', resource_path)\nPYEOF\n\nif ! command -v openclaw &>/dev/null; then\n    echo \"[openclaw] Installing OpenClaw (silent, no onboarding)...\"\n    curl -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard\nelse\n    echo \"[openclaw] OpenClaw already installed, skipping install step.\"\nfi\n\nif command -v openclaw &>/dev/null; then\n    echo \"[openclaw] Ensuring OpenClaw gateway is installed.\"\n    sudo -u ${AZURE_ADMIN_USERNAME} XDG_RUNTIME_DIR=/run/user/$(id -u ${AZURE_ADMIN_USERNAME}) openclaw gateway install || true\nfi\n\nOPENCLAW_CONFIG_DIR=\"${ADMIN_HOME}/.openclaw\"\nOPENCLAW_ENV_FILE=\"${OPENCLAW_CONFIG_DIR}/.azure.env\"\nOPENCLAW_CONFIG=\"${OPENCLAW_CONFIG_DIR}/openclaw.json\"\nBASE_URL=\"${AZURE_OPENAI_ENDPOINT%/}/openai/v1\"\nWORKSPACE_DIR=\"${OPENCLAW_CONFIG_DIR}/workspace\"\n\nmkdir -p \"${OPENCLAW_CONFIG_DIR}\"\ncat <<EOF > \"${OPENCLAW_ENV_FILE}\"\nAZURE_OPENAI_MODEL=${AZURE_OPENAI_MODEL:-${AZURE_MODEL_NAME}}\nAZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}\nAZURE_OPENAI_ACCOUNT_NAME=${AZURE_OPENAI_ACCOUNT_NAME}\nAZURE_OPENAI_RESOURCE_GROUP=${AZURE_OPENAI_RESOURCE_GROUP}\nAZURE_MODEL_NAME=${AZURE_MODEL_NAME}\nAZURE_MODEL_DEPLOYMENT_NAME=${AZURE_MODEL_DEPLOYMENT_NAME}\nAZURE_RESOURCE_JSON_PATH=${AZURE_RESOURCE_JSON_PATH}\nAZURE_ADMIN_USERNAME=${AZURE_ADMIN_USERNAME}\nAZURE_OPENCLAW_PORT=${AZURE_OPENCLAW_PORT}\nAZURE_OPENCLAW_PUBLICIP=${AZURE_OPENCLAW_PUBLICIP}\nAZURE_DYNAMIC_IP=${AZURE_DYNAMIC_IP:-false}\nAZURE_DNS_JSON_PATH=${AZURE_DNS_JSON_PATH:-${SCRIPTS_DIR}/update-dns/ddns.json}\nAZURE_SCRIPTS_REPO_URL=${REPO_URL}\nAZURE_SCRIPTS_REPO_REF=${REPO_REF}\nEOF\n\nmkdir -p \"${WORKSPACE_DIR}\"\nexport OPENCLAW_CONFIG BASE_URL WORKSPACE_DIR AZURE_OPENCLAW_PORT OPENCLAW_ENV_FILE\npython3 - <<''PYEOF''\nimport json\nimport os\nfrom pathlib import Path\n\nconfig_path = Path(os.environ[''OPENCLAW_CONFIG''])\ntry:\n    data = json.loads(config_path.read_text())\nexcept (FileNotFoundError, json.JSONDecodeError):\n    data = {}\n\nmodels = data.setdefault(''models'', {})\nmodels[''mode''] = ''merge''\nproviders = models.setdefault(''providers'', {})\nazure_provider = providers.setdefault(''azure-openai'', {})\nazure_provider.update({\n    ''baseUrl'': os.environ[''BASE_URL''],\n    ''apiKey'': os.environ[''AZURE_OPENAI_APIKEY''],\n    ''auth'': ''api-key''\n})\n\nmodel_id = os.environ.get(''AZURE_OPENAI_MODEL'', os.environ.get(''AZURE_MODEL_NAME'', ''''))\nif model_id:\n    model_entry = {\n        ''id'': model_id,\n        ''name'': f\"{model_id}(Azure)\",\n        ''api'': ''openai-completions''\n    }\n    models_list = azure_provider.setdefault(''models'', [])\n    for idx, model in enumerate(models_list):\n        if model.get(''id'') == model_id:\n            models_list[idx].update(model_entry)\n            break\n    else:\n        models_list.append(model_entry)\n\nagents = data.setdefault(''agents'', {})\ndefaults = agents.setdefault(''defaults'', {})\ndefaults.update({\n    ''model'': f\"azure-openai/{model_id}\",\n    ''workspace'': os.environ[''WORKSPACE_DIR''],\n    ''compaction'': {\n        ''mode'': ''safeguard''\n    }\n})\n\ngateway = data.setdefault(''gateway'', {})\nallowed_origins = [\n    f\"http://localhost:{os.environ[''AZURE_OPENCLAW_PORT'']}\",\n    f\"http://127.0.0.1:{os.environ[''AZURE_OPENCLAW_PORT'']}\",\n]\npublic_ip = os.environ.get(''AZURE_OPENCLAW_PUBLICIP'')\nif public_ip:\n    allowed_origins.append(f\"http://{public_ip}:{os.environ[''AZURE_OPENCLAW_PORT'']}\")\ngateway.update({\n    ''port'': int(os.environ[''AZURE_OPENCLAW_PORT'']),\n    ''mode'': ''local'',\n    ''bind'': ''lan'',\n    ''controlUi'': {\n        ''enabled'': True,\n        ''basePath'': ''/openclaw'',\n        ''allowedOrigins'': allowed_origins\n    }\n})\n\nconfig_path.write_text(json.dumps(data, indent=2))\nprint(f\"[openclaw] Configuration persisted to {config_path} and {os.environ[''OPENCLAW_ENV_FILE'']}\")\nPYEOF\n\necho \"[openclaw] Configuration complete.\"\n\nsudo chown -R \"${AZURE_ADMIN_USERNAME}:${AZURE_ADMIN_USERNAME}\" \"${ADMIN_HOME}\"\n\nrun_set_dync_dns() {\n    if [[ \"${DYNAMIC_IP_ENABLED}\" == \"true\" ]] && [[ -x \"${SCRIPTS_DIR}/set-dync-dns.sh\" ]]; then\n        /bin/bash \"${SCRIPTS_DIR}/set-dync-dns.sh\"\n        if [[ -x \"${SCRIPTS_DIR}/update-ddns-a.sh\" ]]; then\n            /bin/bash \"${SCRIPTS_DIR}/update-ddns-a.sh\" || true\n        fi\n    fi\n}\n\nrun_set_dync_dns\n\nensure_cron_entry() {\n    local entry=\"$1\"\n    local marker=\"$2\"\n    local current\n    current=$(crontab -l 2>/dev/null || true)\n    if printf ''%s'' \"$current\" | grep -Fq \"$marker\"; then\n        return\n    fi\n    if [[ -n \"$current\" ]]; then\n        printf ''%s\\n%s\\n'' \"$current\" \"$entry\" | crontab -\n    else\n        printf ''%s\\n'' \"$entry\" | crontab -\n    fi\n}\n\nif [[ \"${DYNAMIC_IP_ENABLED}\" == \"true\" ]]; then\n    ensure_cron_entry \"@reboot /bin/bash ${SCRIPTS_DIR}/update-ddns-a.sh >> /var/log/update-ddns-a.log 2>&1\" \"update-ddns-a.sh\"\nfi\nensure_cron_entry \"@reboot /bin/bash ${SCRIPTS_DIR}/update-apikey.sh >> /var/log/update-apikey.log 2>&1\" \"update-apikey.sh\"\n\nif [[ -x \"${SCRIPTS_DIR}/update-apikey.sh\" ]]; then\n    /bin/bash \"${SCRIPTS_DIR}/update-apikey.sh\" || true\nelse\n    echo \"[openclaw] update-apikey.sh not found in ${SCRIPTS_DIR}\" >&2\nfi\n\necho \"[openclaw] set-openclaw.sh completed\"\n', ''))]"
+        }
+      }
+    }
+  ],
+  "diagnostics": []
+}
