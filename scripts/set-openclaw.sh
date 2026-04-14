@@ -6,6 +6,7 @@
 #   AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_APIKEY, AZURE_OPENAI_ACCOUNT_NAME,
 #   AZURE_RESOURCE_GROUP_NAME, AZURE_REGION, AZURE_MODEL_NAME,
 #   AZURE_MODEL_DEPLOYMENT_NAME, AZURE_OPENAI_RESOURCE_GROUP, AZURE_OPENCLAW_PORT,
+#   AZURE_OPENCLAW_PUBLICIP, AZURE_OPENCLAW_DNSNAME,
 #   AZURE_INFRA_DIR, AZURE_RESOURCE_JSON_PATH, AZURE_DNS_JSON_PATH,
 #   AZURE_DYNAMIC_IP, AZURE_ADMIN_USERNAME,
 #   AZURE_SCRIPTS_REPO_URL, AZURE_SCRIPTS_REPO_REF
@@ -72,6 +73,8 @@ entry = {
     'lastUpdated': datetime.datetime.utcnow().isoformat() + 'Z',
     'adminUsername': os.environ.get('AZURE_ADMIN_USERNAME', ''),
     'openclawPort': os.environ.get('AZURE_OPENCLAW_PORT', ''),
+    'publicIp': os.environ.get('AZURE_OPENCLAW_PUBLICIP', ''),
+    'dnsName': os.environ.get('AZURE_OPENCLAW_DNSNAME', ''),
     'modelDeploymentName': os.environ.get('AZURE_MODEL_DEPLOYMENT_NAME', ''),
     'dynamicIp': os.environ.get('AZURE_DYNAMIC_IP', 'false').lower() == 'true',
     'scriptsRepoUrl': os.environ.get('AZURE_SCRIPTS_REPO_URL', ''),
@@ -137,6 +140,7 @@ AZURE_RESOURCE_JSON_PATH=${AZURE_RESOURCE_JSON_PATH}
 AZURE_ADMIN_USERNAME=${AZURE_ADMIN_USERNAME}
 AZURE_OPENCLAW_PORT=${AZURE_OPENCLAW_PORT}
 AZURE_OPENCLAW_PUBLICIP=${AZURE_OPENCLAW_PUBLICIP}
+AZURE_OPENCLAW_DNSNAME=${AZURE_OPENCLAW_DNSNAME}
 AZURE_DYNAMIC_IP=${AZURE_DYNAMIC_IP:-false}
 AZURE_DNS_JSON_PATH=${AZURE_DNS_JSON_PATH:-${SCRIPTS_DIR}/update-dns/ddns.json}
 AZURE_SCRIPTS_REPO_URL=${REPO_URL}
@@ -199,6 +203,9 @@ allowed_origins = [
 public_ip = os.environ.get('AZURE_OPENCLAW_PUBLICIP')
 if public_ip:
     allowed_origins.append(f"http://{public_ip}:{os.environ['AZURE_OPENCLAW_PORT']}")
+public_dns = os.environ.get('AZURE_OPENCLAW_DNSNAME')
+if public_dns:
+    allowed_origins.append(f"http://{public_dns}:{os.environ['AZURE_OPENCLAW_PORT']}")
 gateway.update({
     'port': int(os.environ['AZURE_OPENCLAW_PORT']),
     'mode': 'local',

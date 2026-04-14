@@ -36,6 +36,7 @@ param scriptsRepoRef string = 'main'
 var nsgName            = '${vmName}-nsg'
 var subnetName         = 'default'
 var nicName            = '${vmName}-nic'
+var publicDnsLabel     = toLower(replace(vmName, '_', '-'))
 
 // Names must follow openclawName + resource abbreviation, respecting service constraints.
 var compactName        = replace(toLower(openclawName), '-', '')
@@ -125,9 +126,9 @@ resource publicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
   }
   properties: {
     publicIPAllocationMethod: dynaIP ? 'Dynamic' : 'Static'
-    dnsSettings: !dynaIP ? {
-      domainNameLabel: toLower(replace(vmName, '_', '-'))
-    } : null
+    dnsSettings: {
+      domainNameLabel: publicDnsLabel
+    }
   }
 }
 
@@ -290,31 +291,10 @@ var cloudInitContent = replace(cloudInitTemplate, '__ADMIN_USERNAME__', adminUse
 // Build the Custom Script Extension payload:
 // A header that exports the OpenAI credentials is prepended to the
 // configure-openclaw.sh body so the script can read them as env vars.
-// NOTE: \'  is used to produce a literal single quote inside the shell export statement.
 var publicIpAddress = publicIp.properties.ipAddress
+var publicDnsName = publicIp.properties.dnsSettings.fqdn
 
-var configScriptHeader = concat(
-  '#!/bin/bash\nset -euo pipefail\n\n',
-  'export HOME=/home/', adminUsername, '\n',
-  'export AZURE_OPENAI_ENDPOINT=', openaiEndpoint, '\n',
-  'export AZURE_OPENAI_APIKEY=', openaiApiKey, '\n',
-  'export AZURE_OPENAI_ACCOUNT_NAME=', openAIName, '\n',
-  'export AZURE_RESOURCE_GROUP_NAME=', resourceGroupName, '\n',
-  'export AZURE_REGION=', location, '\n',
-  'export AZURE_MODEL_NAME=', modelName, '\n',
-  'export AZURE_OPENAI_MODEL=', modelName, '\n',
-  'export AZURE_MODEL_DEPLOYMENT_NAME=', modelDeploymentName, '\n',
-  'export AZURE_OPENAI_RESOURCE_GROUP=', resourceGroupName, '\n',
-  'export AZURE_OPENCLAW_PORT=', string(openclawPort), '\n',
-  'export AZURE_OPENCLAW_PUBLICIP=', publicIpAddress, '\n',
-  'export AZURE_INFRA_DIR=', infraDir, '\n',
-  'export AZURE_RESOURCE_JSON_PATH=', infraDir, '/resource.json\n',
-  'export AZURE_DNS_JSON_PATH=', infraDir, '/dns.json\n',
-  'export AZURE_DYNAMIC_IP=', string(dynaIP), '\n',
-  'export AZURE_ADMIN_USERNAME=', adminUsername, '\n',
-  'export AZURE_SCRIPTS_REPO_URL=', scriptsRepoUrl, '\n',
-  'export AZURE_SCRIPTS_REPO_REF=', scriptsRepoRef, '\n\n'
-)
+var configScriptHeader = '#!/bin/bash\nset -euo pipefail\n\nexport HOME=/home/${adminUsername}\nexport AZURE_OPENAI_ENDPOINT=${openaiEndpoint}\nexport AZURE_OPENAI_APIKEY=${openaiApiKey}\nexport AZURE_OPENAI_ACCOUNT_NAME=${openAIName}\nexport AZURE_RESOURCE_GROUP_NAME=${resourceGroupName}\nexport AZURE_REGION=${location}\nexport AZURE_MODEL_NAME=${modelName}\nexport AZURE_OPENAI_MODEL=${modelName}\nexport AZURE_MODEL_DEPLOYMENT_NAME=${modelDeploymentName}\nexport AZURE_OPENAI_RESOURCE_GROUP=${resourceGroupName}\nexport AZURE_OPENCLAW_PORT=${string(openclawPort)}\nexport AZURE_OPENCLAW_PUBLICIP=${publicIpAddress}\nexport AZURE_OPENCLAW_DNSNAME=${publicDnsName}\nexport AZURE_INFRA_DIR=${infraDir}\nexport AZURE_RESOURCE_JSON_PATH=${infraDir}/resource.json\nexport AZURE_DNS_JSON_PATH=${infraDir}/dns.json\nexport AZURE_DYNAMIC_IP=${string(dynaIP)}\nexport AZURE_ADMIN_USERNAME=${adminUsername}\nexport AZURE_SCRIPTS_REPO_URL=${scriptsRepoUrl}\nexport AZURE_SCRIPTS_REPO_REF=${scriptsRepoRef}\n\n'
 var configScriptBody        = loadTextContent('../scripts/set-openclaw.sh')
 var configScriptTail   = ''
 var configScriptFull   = '${configScriptHeader}${configScriptBody}${configScriptTail}'
@@ -395,6 +375,7 @@ resource vmCustomScript 'Microsoft.Compute/virtualMachines/extensions@2024-03-01
 // ============================================================
 
 output publicIpAddress string = publicIp.properties.ipAddress
+output publicDnsName string = publicDnsName
 output openclawPort int = openclawPort
 output modelName string = modelName
 output openaiEndpoint  string = openaiEndpoint

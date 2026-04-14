@@ -90,6 +90,7 @@ module resources './resources.bicep' = {
 // ============================================================
 
 output AZURE_OPENCLAW_PUBLICIP string = resources.outputs.publicIpAddress
+output AZURE_OPENCLAW_DNSNAME string = resources.outputs.publicDnsName
 output AZURE_OPENCLAW_PORT int = resources.outputs.openclawPort
 output AZURE_OPENAI_MODEL string = resources.outputs.modelName
 output AZURE_OPENAI_ENDPOINT string = resources.outputs.openaiEndpoint

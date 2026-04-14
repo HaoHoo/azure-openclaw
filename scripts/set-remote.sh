@@ -51,8 +51,7 @@ run_option() {
 			# choice 4: SSH Tunnel
 			echo 'This option uses an SSH tunnel for secure remote access.'
 			echo 'You can access OpenClaw remotely through the SSH server.'
-			echo 'Run this on your local machine to create an SSH tunnel:'
-			echo 'ssh -L <local_port>:localhost:<openclaw_port> <username>@<server_ip>'
+			bash "${SCRIPT_DIR}/openremote/setup_sshtunnel.sh"
 			;;
 		*)
 			echo 'Invalid option. Please select 1-4.'
