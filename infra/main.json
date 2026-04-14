@@ -1,6 +1,5 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-  "languageVersion": "2.0",
   "contentVersion": "1.0.0.0",
   "metadata": {
     "_generator": {
@@ -129,7 +128,7 @@
   "resources": {
     "resources": {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
+      "apiVersion": "2015-01-01",
       "name": "openclaw-resources",
       "properties": {
         "expressionEvaluationOptions": {
